@@ -11,7 +11,19 @@ import os
 engine = create_engine(os.environ.get('SQLALCHEMY_DATABASE_URI'))
 Session = sessionmaker(bind=engine)
 
-#function that requests information about classes for 15 days from today and returns list of dicts
+
+def get_auditoriumoid(building_id):
+    all_auditories = requests.get('http://92.242.58.221/ruzservice.svc/auditoriums?buildingoid=0').json()
+    auditories = {}
+    for i in range(len(all_auditories)):
+        if all_auditories[i]['buildingGid'] == building_id:
+            auditories[all_auditories[i]['number']] = str(all_auditories[i]['auditoriumOid'])
+    return(auditories)
+
+#building id МИЭМа = 92 
+
+
+#function that requests information about classes for 7 days from today and returns list of dicts
 def get_classes(aud_id):
 
     # getting current date (from_date) and a month after (to_date)
