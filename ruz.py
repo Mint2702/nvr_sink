@@ -12,7 +12,7 @@ engine = create_engine(os.environ.get('SQLALCHEMY_DATABASE_URI'))
 Session = sessionmaker(bind=engine)
 
 
-def get_auditoriumoid(building_id):
+def get_auditoriumoid(building_id = 92):
     all_auditories = requests.get('http://92.242.58.221/ruzservice.svc/auditoriums?buildingoid=0').json()
     auditories = {}
     for i in range(len(all_auditories)):
