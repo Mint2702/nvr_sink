@@ -37,33 +37,29 @@ if not creds or not creds.valid:
 calendar_service = build('calendar', 'v3', credentials=creds)
 
 
-def create_event_(calendar_id: str, start_time: str, end_time: str, summary: str, lecturer: str) -> str:
+def create_event_(calendar_id: str, summary: str, location: str, description: str, start_time: str) -> str:
     """
         format 2019-11-12T15:00
     """
-    with lock:
+    date_format = "%Y-%m-%dT%H:%M:%S"
 
-        date_format = "%Y-%m-%d%H:%M:%S"
+    end_time = start_time + timedelta(minutes=80)
 
-        start_dateTime = datetime.strptime(start_time, date_format[:-3])
-        end_StartTime = datetime.strptime(end_time, date_format[:-3]) \
-            if end_time else start_dateTime + timedelta(minutes=80)
+    event = {
+        'summary': summary,
+        'location': location,
+        'start': {
+            'dateTime': start_time.strftime(date_format),
+            'timeZone': "Europe/Moscow"
+        },
+        'end': {
+            'dateTime': end_time.strftime(date_format),
+            'timeZone': "Europe/Moscow"
+        },
+        'description': description
+    }
 
-        event = {
-            'summary': summary,
-            'lecturer': lecturer,
-            'start': {
-                'dateTime': start_dateTime.strftime(date_format),
-                'timeZone': "Europe/Moscow"
-            },
-            'end': {
-                'dateTime': end_StartTime.strftime(date_format),
-                'timeZone': "Europe/Moscow"
-            }
-        }
+    event = calendar_service.events().insert(
+        calendarId=calendar_id, body=event).execute()
 
-        event = calendar_service.events().insert(
-            calendarId=calendar_id, body=event).execute()
-
-        return event['htmlLink']
-
+    return event['htmlLink']
