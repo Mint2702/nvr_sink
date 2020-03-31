@@ -31,6 +31,9 @@ if __name__ == '__main__':
                 'floorSection': room['number'],
                 "resourceDescription": room['typeOfAuditorium'],
                 'capacity': room['amount'],
-                'userVisibleDescription': f"Аудитория {room['number']}"}
+                'userVisibleDescription': f"Аудитория {room['number']}\n"
+                                          f"https://meet.miem.hse.ru/{room['number']}",
+                'resourceType': 'Room'}
 
-        resource = googleAdminService.set_resource(body)
+        if room['number'] == '504':
+            resource = googleAdminService.set_resource(body)
