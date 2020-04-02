@@ -38,7 +38,8 @@ def get_classes(aud_id):
             (class_['date'] + class_['beginLesson']), '%Y.%m.%d%H:%M')
         lesson['summary'] = class_['discipline']
         lesson['location'] = f"{class_['auditorium']}/{class_['building']}"
-        lesson['description'] = (f"{class_['stream']}\n{class_['kindOfWork']}")
+        lesson['description'] = (f"{class_['stream']}\n{class_['discipline']}\n"
+                                 f"{class_['lecturer']}\n{class_['kindOfWork']}\n{lesson['location']}")
         classes.append(lesson)
 
     return classes
