@@ -1,16 +1,14 @@
 from __future__ import print_function
 
-import datetime
 import os.path
 import pickle
-from datetime import datetime, timedelta
+from datetime import timedelta
 from threading import RLock
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-lock = RLock()
 
 CAMPUS = os.environ.get('CAMPUS')
 SCOPES = 'https://www.googleapis.com/auth/calendar'
@@ -18,8 +16,8 @@ SCOPES = 'https://www.googleapis.com/auth/calendar'
 Setting up calendar
 """
 creds = None
-token_path = '.creds/tokenCalendar.pickle'
-creds_path = '.creds/credentials.json'
+token_path = '/gcalendar_ruz/creds/tokenCalendar.pickle'
+creds_path = '/gcalendar_ruz/creds/credentials.json'
 
 if os.path.exists(token_path):
     with open(token_path, 'rb') as token:

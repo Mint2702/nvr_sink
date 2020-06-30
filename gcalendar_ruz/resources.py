@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
-from ruz import get_auditoriumoid
+from core.apis.ruz_api import get_auditoriumoid
 
 
 class GoogleAdminService:
