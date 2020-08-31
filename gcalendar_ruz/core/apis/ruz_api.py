@@ -1,37 +1,51 @@
 import requests
 from datetime import datetime, timedelta
+from pprint import pprint
 
 
-RUZ_API_URL = 'http://92.242.58.221/ruzservice.svc'
+class RuzApi:
+    def __init__(self, url: str = 'http://92.242.58.221/ruzservice.svc'):
+        self.url = url
 
+    # building id МИЭМа = 92
+    def get_auditoriumoid(self, building_id: int = 92):
+        all_auditories = requests.get(
+            f'{self.url}/auditoriums?buildingoid=0').json()
 
-# building id МИЭМа = 92
-def get_auditoriumoid(building_id=92):
-    all_auditories = requests.get(
-        f'{RUZ_API_URL}/auditoriums?buildingoid=0').json()
+        return [room for room in all_auditories if room['buildingGid'] == building_id and room['typeOfAuditorium'] != 'Неаудиторные']
 
-    return [room for room in all_auditories if room['buildingGid'] == building_id]
+    # function that requests information about classes for 1 day from today and returns list of dicts
+    def get_classes(self, ruz_room_id: str):
+        """
+        Get classes in room for 1 week
+        """
+        needed_date = (datetime.today() + timedelta(days=1)
+                       ).strftime('%Y.%m.%d')
 
+        res = requests.get(f"{self.url}/lessons?fromdate=" +
+                           needed_date + "&todate=" + needed_date + "&auditoriumoid=" + str(ruz_room_id))
 
-# function that requests information about classes for 7 days from today and returns list of dicts
-def get_classes(aud_id):
-    # getting current date (from_date) and a month after (to_date)
-    from_date = datetime.today().strftime('%Y.%m.%d')
-    to_date = (datetime.strptime(from_date, '%Y.%m.%d') +
-               timedelta(days=6)).strftime('%Y.%m.%d')
+        classes = []
+        for class_ in res.json():
+            lesson = {'room': class_['auditorium']}
+            lesson['start_time'] = datetime.strptime(
+                (class_['date'] + class_['beginLesson']), '%Y.%m.%d%H:%M')
+            lesson['end_time'] = datetime.strptime(
+                (class_['date'] + class_['endLesson']), '%Y.%m.%d%H:%M')
+            lesson['summary'] = class_['discipline']
+            lesson['location'] = f"{class_['auditorium']}/{class_['building']}"
+            lesson['url'] = class_['url1']
+            if class_['group'] is not None:
+                stream = class_['group'].split('#')[0]
+            else:
+                stream = ''
+            lesson['description'] = (f"Поток: {stream}\n"
+                                     f"Дисциплина: {class_['discipline']}\n"
+                                     f"URL: {class_['url1']}\n"
+                                     f"Преподаватель: {class_['lecturer']}\n"
+                                     f"Тип занятия: {class_['kindOfWork']}\n"
+                                     f"Локация: {lesson['location']}")
 
-    res = requests.get(f"{RUZ_API_URL}/lessons?fromdate=" +
-                       from_date + "&todate=" + to_date + "&auditoriumoid=" + aud_id)
+            classes.append(lesson)
 
-    classes = []
-    for class_ in res.json():
-        lesson = {'room': class_['auditorium']}
-        lesson['start_time'] = datetime.strptime(
-            (class_['date'] + class_['beginLesson']), '%Y.%m.%d%H:%M')
-        lesson['summary'] = class_['discipline']
-        lesson['location'] = f"{class_['auditorium']}/{class_['building']}"
-        lesson['description'] = (f"{class_['stream']}\n{class_['discipline']}\n"
-                                 f"{class_['lecturer']}\n{class_['kindOfWork']}\n{lesson['location']}")
-        classes.append(lesson)
-
-    return classes
+        return classes
