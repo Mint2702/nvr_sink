@@ -32,16 +32,13 @@ class RuzApi:
                 (class_['date'] + class_['beginLesson']), '%Y.%m.%d%H:%M')
             lesson['end_time'] = datetime.strptime(
                 (class_['date'] + class_['endLesson']), '%Y.%m.%d%H:%M')
-            lesson['summary'] = class_['discipline']
             lesson['location'] = f"{class_['auditorium']}/{class_['building']}"
-            lesson['url'] = class_['url1']
             if class_['group'] is not None:
                 stream = class_['group'].split('#')[0]
             else:
                 stream = ''
             lesson['description'] = (f"Поток: {stream}\n"
                                      f"Дисциплина: {class_['discipline']}\n"
-                                     f"URL: {class_['url1']}\n"
                                      f"Преподаватель: {class_['lecturer']}\n"
                                      f"Тип занятия: {class_['kindOfWork']}\n"
                                      f"Локация: {lesson['location']}")
