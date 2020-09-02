@@ -63,7 +63,7 @@ class GCalendar:
 
     def add_classes_to_calendar(self, classes: list, calendar_id: str):
         for class_ in classes:
-            self.create_event_(calendar_id, class_['summary'],
+            self.create_event_(calendar_id, class_['discipline'],
                                class_['location'], class_['description'],
                                class_['start_time'], class_['end_time'])
 
@@ -77,4 +77,3 @@ class GCalendar:
                                                    orderBy='startTime').execute()
         events = events_result.get('items', [])
         return events
-

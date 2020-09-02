@@ -38,10 +38,8 @@ class RuzApi:
             else:
                 stream = ''
             lesson['description'] = (f"Поток: {stream}\n"
-                                     f"Дисциплина: {class_['discipline']}\n"
                                      f"Преподаватель: {class_['lecturer']}\n"
-                                     f"Тип занятия: {class_['kindOfWork']}\n"
-                                     f"Локация: {lesson['location']}")
+                                     f"Тип занятия: {class_['kindOfWork']}\n")
 
             classes.append(lesson)
 
