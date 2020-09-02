@@ -63,7 +63,7 @@ class GCalendar:
 
     def add_classes_to_calendar(self, classes: list, calendar_id: str):
         for class_ in classes:
-            self.create_event_(calendar_id, class_['discipline'],
+            self.create_event_(calendar_id, class_['summary'],
                                class_['location'], class_['description'],
                                class_['start_time'], class_['end_time'])
 

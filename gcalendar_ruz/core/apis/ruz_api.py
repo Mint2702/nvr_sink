@@ -33,6 +33,7 @@ class RuzApi:
             lesson['end_time'] = datetime.strptime(
                 (class_['date'] + class_['endLesson']), '%Y.%m.%d%H:%M')
             lesson['location'] = f"{class_['auditorium']}/{class_['building']}"
+            lesson['summary'] = class_['discipline']
             if class_['group'] is not None:
                 stream = class_['group'].split('#')[0]
             else:

@@ -17,11 +17,10 @@ if __name__ == "__main__":
     ruz_api = RuzApi()
     calendar_api = GCalendar(
         '/gcalendar_ruz/creds/creds.json', '/gcalendar_ruz/creds/tokenCalendar.pickle')
-    
+
     session = Session()
     rooms = session.query(Room).all()
     session.close()
-
 
     for room in rooms:
         try:
