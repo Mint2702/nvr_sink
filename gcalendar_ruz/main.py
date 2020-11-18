@@ -56,10 +56,10 @@ def fetch_offline_rooms():
 
         for i in range(0, len(classes), 10):
             chunk = classes[i : i + 10]
-            print(f"Adding classes: {chunk}")
+            logger.info(f"Adding classes: {chunk}")
             calendar_api.add_classes_to_calendar(chunk, room.calendar)
             time.sleep(10)
-    print(f"Created events for {datetime.today().date() + timedelta(days=1)}")
+    logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
 
 def fetch_online_rooms():
@@ -84,16 +84,16 @@ def fetch_online_rooms():
                 for class_ in chunk
                 if class_["url"] is None or "meet.miem.hse.ru" not in class_["url"]
             ]
-            jitsi = [
+            jitsi_classes = [
                 class_
                 for class_ in chunk
                 if class_["url"] is not None and "meet.miem.hse.ru" in class_["url"]
             ]
 
-            logger.info(f"Adding classes: {ruz_classes}")
+            logger.info(f"Adding ruz classes: {ruz_classes}")
             calendar_api.add_classes_to_calendar(ruz_classes, ruz.calendar)
-            logger.info(f"Adding jitsi classes: {jitsi}")
-            calendar_api.add_classes_to_calendar(jitsi, jitsi.calendar)
+            logger.info(f"Adding jitsi classes: {jitsi_classes}")
+            calendar_api.add_classes_to_calendar(jitsi_classes, jitsi.calendar)
             time.sleep(10)
 
     logger.info(
