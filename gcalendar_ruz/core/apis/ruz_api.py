@@ -57,6 +57,9 @@ class RuzApi:
                 f"Тип занятия: {class_['kindOfWork']}\n"
             )
 
+            if lesson["url"] is not None:
+                lesson["description"] += f"URL: {lesson["url"]}\n"
+
             classes.append(lesson)
 
         return classes
