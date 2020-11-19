@@ -35,11 +35,7 @@ class GCalendar:
     def create_event_(
         self,
         calendar_id: str,
-        summary: str,
-        location: str,
-        description: str,
-        start_time: str,
-        end_time: str or None = None,
+        class_: dict,
     ) -> str:
         """
         format: "%Y-%m-%dT%H:%M:%S"
@@ -47,21 +43,25 @@ class GCalendar:
         """
         date_format = "%Y-%m-%dT%H:%M:%S"
         if not end_time:
-            end_time = start_time + timedelta(minutes=80)
+            end_time = class_["start_time"] + timedelta(minutes=80)
 
         event = {
-            "summary": summary,
-            "location": location,
+            "summary": class_["summary"],
+            "location": class_["location"],
             "start": {
-                "dateTime": start_time.strftime(date_format),
+                "dateTime": class_["start_time"].strftime(date_format),
                 "timeZone": "Europe/Moscow",
             },
             "end": {
-                "dateTime": end_time.strftime(date_format),
+                "dateTime": class_["end_time"].strftime(date_format),
                 "timeZone": "Europe/Moscow",
             },
-            "description": description,
+            "description": class_["description"],
         }
+
+        if class_.get("lecturerEmail"):
+            event["attendees"] = {"email": class_["lecturerEmail"]}
+            event["reminders"] = {"overrides": [{"method": "popup", "minutes": 10}]}
 
         event = (
             self.service.events().insert(calendarId=calendar_id, body=event).execute()
@@ -71,14 +71,7 @@ class GCalendar:
 
     def add_classes_to_calendar(self, classes: list, calendar_id: str):
         for class_ in classes:
-            self.create_event_(
-                calendar_id,
-                class_["summary"],
-                class_["location"],
-                class_["description"],
-                class_["start_time"],
-                class_["end_time"],
-            )
+            self.create_event_(calendar_id, class_)
 
     def delete_event(self, calendar_id, event_id):
         self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
