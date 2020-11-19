@@ -18,7 +18,7 @@ class RuzApi:
         ]
 
     # function that requests information about classes for 1 day from today and returns list of dicts
-    def get_classes(self, ruz_room_id: str):
+    def get_classes(self, ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
         """
@@ -57,8 +57,8 @@ class RuzApi:
                 f"Тип занятия: {class_['kindOfWork']}\n"
             )
 
-            if lesson["url"] is not None:
-                lesson["description"] += f"URL: {lesson["url"]}\n"
+            if lesson["url"] and online:
+                lesson["description"] += f"URL: {lesson['url']}\n"
 
             classes.append(lesson)
 

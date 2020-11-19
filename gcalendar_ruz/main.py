@@ -72,7 +72,7 @@ def fetch_online_rooms():
 
     for room in rooms:
         try:
-            classes = ruz_api.get_classes(room["auditoriumOid"])
+            classes = ruz_api.get_classes(room["auditoriumOid"], online=True)
             classes_len = len(classes)
         except Exception:
             continue

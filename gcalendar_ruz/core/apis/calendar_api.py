@@ -80,6 +80,9 @@ class GCalendar:
                 class_["end_time"],
             )
 
+    def delete_event(self, calendar_id, event_id):
+        self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+
     def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
