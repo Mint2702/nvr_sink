@@ -42,8 +42,6 @@ class GCalendar:
         ex: 2019-11-12T15:00
         """
         date_format = "%Y-%m-%dT%H:%M:%S"
-        if not end_time:
-            end_time = class_["start_time"] + timedelta(minutes=80)
 
         event = {
             "summary": class_["summary"],
@@ -60,8 +58,8 @@ class GCalendar:
         }
 
         if class_.get("lecturerEmail"):
-            event["attendees"] = {"email": class_["lecturerEmail"]}
-            event["reminders"] = {"overrides": [{"method": "popup", "minutes": 10}]}
+            event["attendees"] = [{"email": class_["lecturerEmail"]}]
+            event["reminders"] = {"useDefault": True}
 
         event = (
             self.service.events().insert(calendarId=calendar_id, body=event).execute()

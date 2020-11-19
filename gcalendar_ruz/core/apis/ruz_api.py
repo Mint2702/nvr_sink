@@ -24,14 +24,11 @@ class RuzApi:
         """
         needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
 
-        res = requests.get(
-            f"{self.url}/lessons?fromdate="
-            + needed_date
-            + "&todate="
-            + needed_date
-            + "&auditoriumoid="
-            + str(ruz_room_id)
+        params = dict(
+            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
         )
+
+        res = requests.get(f"{self.url}/lessons", params=params)
 
         classes = []
         for class_ in res.json():
@@ -59,7 +56,9 @@ class RuzApi:
 
             if lesson["url"] and online:
                 lesson["description"] += f"URL: {lesson['url']}\n"
-                lesson["lecturerEmail"] = class_["lecturerEmail"].split('@')[0] + '@miem.hse.ru'
+                lesson["lecturerEmail"] = (
+                    class_["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
+                )
 
             classes.append(lesson)
 

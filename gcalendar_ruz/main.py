@@ -11,7 +11,7 @@ from core.apis.calendar_api import GCalendar
 from core.db.models import Room, OnlineRoom
 
 
-engine = create_engine(os.environ.get("SQLALCHEMY_DATABASE_URI"))
+engine = create_engine(os.environ.get("DB_URL"))
 Session = sessionmaker(bind=engine)
 
 
