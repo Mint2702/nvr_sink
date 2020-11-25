@@ -59,9 +59,10 @@ class RuzApi:
 
             if lesson["url"] and online:
                 lesson["description"] += f"URL: {lesson['url']}\n"
-                lesson["lecturerEmail"] = (
-                    class_["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
-                )
+                if class_.get("lecturerEmail"): # None or ""
+                    lesson["lecturerEmail"] = (
+                        class_["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
+                    )
 
             classes.append(lesson)
 
