@@ -74,7 +74,8 @@ def fetch_online_rooms():
         try:
             classes = ruz_api.get_classes(room["auditoriumOid"], online=True)
             classes_len = len(classes)
-        except Exception:
+        except Exception as err:
+            logger.error(err, exc_info=True)
             continue
 
         for i in range(0, classes_len, 10):

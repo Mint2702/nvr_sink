@@ -1,6 +1,8 @@
 import requests
 from datetime import datetime, timedelta
 
+from .nvr_api import get_course_emails
+
 
 class RuzApi:
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
@@ -44,6 +46,7 @@ class RuzApi:
             lesson["url"] = class_["url1"]
             if class_["group"] is not None:
                 stream = class_["group"].split("#")[0]
+                lesson["grp_emails"] = get_course_emails(stream)
             else:
                 stream = ""
             lesson["stream"] = stream

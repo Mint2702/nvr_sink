@@ -59,6 +59,9 @@ class GCalendar:
 
         if class_.get("lecturerEmail"):
             event["attendees"] = [{"email": class_["lecturerEmail"]}]
+            if class_.get("grp_emails"):
+                event["attendees"] += [{"email": grp} for grp in class_["grp_emails"]]
+
             event["reminders"] = {"useDefault": True}
 
         event = (
