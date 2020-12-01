@@ -51,7 +51,6 @@ class Room(Base, CommonMixin):
     tracking_state = Column(Boolean, default=False)
 
     records = relationship("Record", back_populates="room")
-    sources = relationship("Source", backref="room", lazy=False)
 
 
 class OnlineRoom(Base, CommonMixin):

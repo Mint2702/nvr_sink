@@ -91,11 +91,11 @@ class CalendarManager:
 
                 logger.info(f"Adding ruz classes: {ruz_classes}")
                 for class_ in ruz_classes:
-                    event = self.calendar_api.create_event_(ruz.calendar, class_)
+                    self.calendar_api.create_event_(ruz.calendar, class_)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for class_ in jitsi_classes:
-                    event = self.calendar_api.create_event_(jitsi.calendar, class_)
+                    self.calendar_api.create_event_(jitsi.calendar, class_)
 
                 time.sleep(10)
 
@@ -125,18 +125,18 @@ class CalendarManager:
         user_record = UserRecord(user_id=creator.id, record_id=new_record.id)
         self.session.add(user_record)
         self.session.commit()
-    
+
     def delete_online_events(self):
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
         events = self.calendar_api.get_events(jitsi.calendar)
         for event in events:
-            self.calendar_api.delete_event(jitsi.calendar, event['id'])
+            self.calendar_api.delete_event(jitsi.calendar, event["id"])
 
         events = self.calendar_api.get_events(ruz.calendar)
         for event in events:
-            self.calendar_api.delete_event(ruz.calendar, event['id'])
+            self.calendar_api.delete_event(ruz.calendar, event["id"])
 
 
 if __name__ == "__main__":
