@@ -35,12 +35,12 @@ class CommonMixin(IdMixin, TimeMixin):
 class Room(Base, CommonMixin):
     __tablename__ = "rooms"
 
-    id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, unique=True)
-    tracking_state = Column(Boolean, default=False)
     ruz_id = Column(Integer)
+
     drive = Column(String(200))
     calendar = Column(String(200))
+    stream_url = Column(String(300))
 
     sound_source = Column(String(100))
     main_source = Column(String(100))
@@ -48,6 +48,10 @@ class Room(Base, CommonMixin):
     screen_source = Column(String(100))
 
     auto_control = Column(Boolean, default=True)
+    tracking_state = Column(Boolean, default=False)
+
+    records = relationship("Record", back_populates="room")
+    sources = relationship("Source", backref="room", lazy=False)
 
 
 class OnlineRoom(Base, CommonMixin):
@@ -75,6 +79,13 @@ class Record(Base, CommonMixin):
     room_id = Column(Integer, ForeignKey("rooms.id"))
     room = relationship("Room", back_populates="records")
     users = relationship("UserRecord", back_populates="record")
+
+    def update_from_calendar(self, **kwargs):
+        self.event_id = kwargs.get("id")
+        self.event_name = kwargs.get("summary")
+        self.date = kwargs["start"]["dateTime"].split("T")[0]
+        self.start_time = kwargs["start"]["dateTime"].split("T")[1][:5]
+        self.end_time = kwargs["end"]["dateTime"].split("T")[1][:5]
 
 
 class UserRecord(Base, TimeMixin):
