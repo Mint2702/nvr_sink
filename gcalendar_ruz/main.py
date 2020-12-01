@@ -55,7 +55,9 @@ class CalendarManager:
             for i in range(0, len(classes), 10):
                 chunk = classes[i : i + 10]
                 logger.info(f"Adding classes: {chunk}")
-                self.calendar_api.add_classes_to_calendar(chunk, room.calendar)
+                for class_ in chunk:
+                    event = self.calendar_api.create_event_(room.calendar, class_)
+                    self.create_record(room, event)
                 time.sleep(10)
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
@@ -90,12 +92,10 @@ class CalendarManager:
                 logger.info(f"Adding ruz classes: {ruz_classes}")
                 for class_ in ruz_classes:
                     event = self.calendar_api.create_event_(ruz.calendar, class_)
-                    self.create_record(room, event)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for class_ in jitsi_classes:
                     event = self.calendar_api.create_event_(jitsi.calendar, class_)
-                    self.create_record(room, event)
 
                 time.sleep(10)
 
