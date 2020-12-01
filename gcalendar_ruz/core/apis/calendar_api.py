@@ -70,10 +70,6 @@ class GCalendar:
 
         return event
 
-    def add_classes_to_calendar(self, classes: list, calendar_id: str):
-        for class_ in classes:
-            self.create_event_(calendar_id, class_)
-
     def delete_event(self, calendar_id, event_id):
         self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
 

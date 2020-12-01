@@ -1,18 +1,11 @@
 import time
-import os
 from datetime import datetime, timedelta
 import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
-from core.db.models import Room, OnlineRoom
-
-
-engine = create_engine(os.environ.get("DB_URL"))
-Session = sessionmaker(bind=engine)
+from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 
 
 def create_logger(mode="INFO"):
@@ -37,71 +30,104 @@ def create_logger(mode="INFO"):
 
 logger = create_logger()
 
-ruz_api = RuzApi()
-calendar_api = GCalendar(
-    "/gcalendar_ruz/creds/creds.json", "/gcalendar_ruz/creds/tokenCalendar.pickle"
-)
 
+class CalendarManager:
+    def __init__(self):
+        self.session = Session()
+        self.ruz_api = RuzApi()
+        self.calendar_api = GCalendar(
+            "/gcalendar_ruz/creds/creds.json",
+            "/gcalendar_ruz/creds/tokenCalendar.pickle",
+        )
 
-def fetch_offline_rooms():
-    session = Session()
-    rooms = session.query(Room).all()
-    session.close()
+    def __del__(self):
+        self.session.close()
 
-    for room in rooms:
-        try:
-            classes = ruz_api.get_classes(room.ruz_id)
-        except Exception:
-            continue
+    def fetch_offline_rooms(self):
+        rooms = self.session.query(Room).all()
 
-        for i in range(0, len(classes), 10):
-            chunk = classes[i : i + 10]
-            logger.info(f"Adding classes: {chunk}")
-            calendar_api.add_classes_to_calendar(chunk, room.calendar)
-            time.sleep(10)
-    logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
+        for room in rooms:
+            try:
+                classes = self.ruz_api.get_classes(room.ruz_id)
+            except Exception:
+                continue
 
+            for i in range(0, len(classes), 10):
+                chunk = classes[i : i + 10]
+                logger.info(f"Adding classes: {chunk}")
+                self.calendar_api.add_classes_to_calendar(chunk, room.calendar)
+                time.sleep(10)
 
-def fetch_online_rooms():
-    session = Session()
-    ruz = session.query(OnlineRoom).filter_by(name="РУЗ").first()
-    jitsi = session.query(OnlineRoom).filter_by(name="Jitsi").first()
-    session.close()
+        logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
-    rooms = ruz_api.get_auditoriumoid()
+    def fetch_online_rooms(self):
+        ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
+        jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
-    for room in rooms:
-        try:
-            classes = ruz_api.get_classes(room["auditoriumOid"], online=True)
-            classes_len = len(classes)
-        except Exception as err:
-            logger.error(err, exc_info=True)
-            continue
+        rooms = self.ruz_api.get_auditoriumoid()
 
-        for i in range(0, classes_len, 10):
-            chunk = classes[i : i + 10]
-            ruz_classes = [
-                class_
-                for class_ in chunk
-                if class_["url"] is None or "meet.miem.hse.ru" not in class_["url"]
-            ]
-            jitsi_classes = [
-                class_
-                for class_ in chunk
-                if class_["url"] is not None and "meet.miem.hse.ru" in class_["url"]
-            ]
+        for room in rooms:
+            try:
+                classes = self.ruz_api.get_classes(room["auditoriumOid"], online=True)
+                classes_len = len(classes)
+            except Exception as err:
+                logger.error(err, exc_info=True)
+                continue
 
-            logger.info(f"Adding ruz classes: {ruz_classes}")
-            calendar_api.add_classes_to_calendar(ruz_classes, ruz.calendar)
-            logger.info(f"Adding jitsi classes: {jitsi_classes}")
-            calendar_api.add_classes_to_calendar(jitsi_classes, jitsi.calendar)
-            time.sleep(10)
+            for i in range(0, classes_len, 10):
+                chunk = classes[i : i + 10]
+                ruz_classes = [
+                    class_
+                    for class_ in chunk
+                    if class_["url"] is None or "meet.miem.hse.ru" not in class_["url"]
+                ]
+                jitsi_classes = [
+                    class_
+                    for class_ in chunk
+                    if class_["url"] is not None and "meet.miem.hse.ru" in class_["url"]
+                ]
 
-    logger.info(
-        f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
-    )
+                logger.info(f"Adding ruz classes: {ruz_classes}")
+                for class_ in ruz_classes:
+                    event = self.calendar_api.create_event_(ruz.calendar, class_)
+                    self.create_record(room, event)
+
+                logger.info(f"Adding jitsi classes: {jitsi_classes}")
+                for class_ in jitsi_classes:
+                    event = self.calendar_api.create_event_(jitsi.calendar, class_)
+                    self.create_record(room, event)
+
+                time.sleep(10)
+
+        logger.info(
+            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
+        )
+
+    def create_record(self, room: Room, event: dict):
+        start_date = event["start"]["dateTime"].split("T")[0]
+        end_date = event["end"]["dateTime"].split("T")[0]
+
+        if start_date != end_date:
+            return
+
+        creator = (
+            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        )
+        if not creator:
+            return
+
+        new_record = Record()
+        new_record.room = room
+        new_record.update_from_calendar(**event)
+        self.session.add(new_record)
+        self.session.commit()
+
+        user_record = UserRecord(user_id=creator.id, record_id=new_record.id)
+        self.session.add(user_record)
+        self.session.commit()
 
 
 if __name__ == "__main__":
-    fetch_offline_rooms()
-    fetch_online_rooms()
+    manager = CalendarManager()
+    manager.fetch_offline_rooms()
+    manager.fetch_online_rooms()
