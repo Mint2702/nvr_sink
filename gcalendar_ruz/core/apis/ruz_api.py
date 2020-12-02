@@ -46,7 +46,9 @@ class RuzApi:
             lesson["url"] = class_["url1"]
             if class_["group"] is not None:
                 stream = class_["group"].split("#")[0]
-                lesson["grp_emails"] = get_course_emails(stream)
+                grp_emails = get_course_emails(stream)
+                if grp_emails is not None:
+                    lesson["grp_emails"] = grp_emails
             else:
                 stream = ""
             lesson["stream"] = stream
