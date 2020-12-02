@@ -47,6 +47,9 @@ class CalendarManager:
         rooms = self.session.query(Room).all()
 
         for room in rooms:
+            if not room.sources:
+                continue
+            
             try:
                 classes = self.ruz_api.get_classes(room.ruz_id)
             except Exception:
