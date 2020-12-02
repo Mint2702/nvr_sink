@@ -8,7 +8,7 @@ def get_course_emails(course_code):
     data = res.json()
     grp_emails = data.get("emails")
 
-    if grp_emails == ['']
+    if grp_emails == ['']:
         return None
 
     return grp_emails
