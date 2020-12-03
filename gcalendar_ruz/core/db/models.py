@@ -51,7 +51,22 @@ class Room(Base, CommonMixin):
     tracking_state = Column(Boolean, default=False)
 
     records = relationship("Record", back_populates="room")
+    sources = relationship("Source", backref="room", lazy=False)
 
+
+class Source(Base):
+    __tablename__ = "sources"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), default="источник")
+    ip = Column(String(200))
+    port = Column(String(200))
+    rtsp = Column(String(200), default="no")
+    audio = Column(String(200))
+    merge = Column(String(200))
+    tracking = Column(String(200))
+    room_id = Column(Integer, ForeignKey("rooms.id"))
+    
 
 class OnlineRoom(Base, CommonMixin):
     __tablename__ = "online_rooms"
