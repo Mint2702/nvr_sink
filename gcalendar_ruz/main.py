@@ -155,4 +155,4 @@ class CalendarManager:
 if __name__ == "__main__":
     manager = CalendarManager()
     manager.fetch_offline_rooms()
-    # manager.fetch_online_rooms()
+    manager.fetch_online_rooms()
