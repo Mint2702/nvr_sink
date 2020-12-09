@@ -62,6 +62,7 @@ class CalendarManager:
                 for lesson in chunk:
                     event = self.calendar_api.create_event(room.calendar, lesson)
                     lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = room.calendar
                     nvr_api.add_lesson(lesson)
                     self.create_record(room, event)
                 time.sleep(10)
@@ -101,12 +102,14 @@ class CalendarManager:
                 for lesson in ruz_classes:
                     event = self.calendar_api.create_event(ruz.calendar, lesson)
                     lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = ruz.calendar
                     nvr_api.add_lesson(lesson)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
                     event = self.calendar_api.create_event(jitsi.calendar, lesson)
                     lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = jitsi.calendar
                     nvr_api.add_lesson(lesson)
 
                 time.sleep(10)
