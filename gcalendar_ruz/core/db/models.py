@@ -66,7 +66,7 @@ class Source(Base):
     merge = Column(String(200))
     tracking = Column(String(200))
     room_id = Column(Integer, ForeignKey("rooms.id"))
-    
+
 
 class OnlineRoom(Base, CommonMixin):
     __tablename__ = "online_rooms"

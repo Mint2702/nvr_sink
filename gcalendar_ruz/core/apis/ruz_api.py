@@ -1,7 +1,8 @@
 import requests
 from datetime import datetime, timedelta
 
-from .nvr_api import get_course_emails
+from . import nvr_api
+from ..utils import camel_to_snake
 
 
 class RuzApi:
@@ -34,36 +35,44 @@ class RuzApi:
 
         classes = []
         for class_ in res.json():
-            lesson = {"room": class_["auditorium"]}
-            lesson["start_time"] = datetime.strptime(
-                (class_["date"] + class_["beginLesson"]), "%Y.%m.%d%H:%M"
-            )
-            lesson["end_time"] = datetime.strptime(
-                (class_["date"] + class_["endLesson"]), "%Y.%m.%d%H:%M"
-            )
+            lesson = {}
+
+            date = class_.pop("date")
+            date = date.split(".")
+            lesson["date"] = "-".join(date)
+
+            lesson["start_time"] = class_.pop("beginLesson")
+            lesson["end_time"] = class_.pop("endLesson")
+
             lesson["summary"] = class_["discipline"]
             lesson["location"] = f"{class_['auditorium']}/{class_['building']}"
-            lesson["url"] = class_["url1"]
-            if class_["group"] is not None:
-                stream = class_["group"].split("#")[0]
-                grp_emails = get_course_emails(stream)
+
+            for key in class_:
+                new_key = f"ruz_{camel_to_snake(key)}"
+                lesson[new_key] = class_[key]
+
+            lesson["ruz_url"] = lesson["ruz_url1"]
+
+            if lesson["ruz_group"] is not None:
+                stream = lesson["ruz_group"].split("#")[0]
+                grp_emails = nvr_api.get_course_emails(stream)
                 if grp_emails is not None:
                     lesson["grp_emails"] = grp_emails
             else:
                 stream = ""
-            lesson["stream"] = stream
+            lesson["course_code"] = stream
 
             lesson["description"] = (
                 f"Поток: {stream}\n"
-                f"Преподаватель: {class_['lecturer']}\n"
-                f"Тип занятия: {class_['kindOfWork']}\n"
+                f"Преподаватель: {lesson['ruz_lecturer']}\n"
+                f"Тип занятия: {lesson['ruz_kind_of_work']}\n"
             )
 
-            if lesson["url"] and online:
-                lesson["description"] += f"URL: {lesson['url']}\n"
-                if class_.get("lecturerEmail"):  # None or ""
-                    lesson["lecturerEmail"] = (
-                        class_["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
+            if lesson["ruz_url"] and online:
+                lesson["description"] += f"URL: {lesson['ruz_url']}\n"
+                if lesson.get("ruz_lecturer_email"):  # None or ""
+                    lesson["ruz_lecturer_email"] = (
+                        lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
                     )
 
             classes.append(lesson)

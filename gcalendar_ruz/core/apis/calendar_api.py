@@ -32,35 +32,34 @@ class GCalendar:
 
         self.service = build("calendar", "v3", credentials=creds)
 
-    def create_event_(
+    def create_event(
         self,
         calendar_id: str,
-        class_: dict,
+        lesson: dict,
     ) -> str:
         """
         format: "%Y-%m-%dT%H:%M:%S"
         ex: 2019-11-12T15:00
         """
-        date_format = "%Y-%m-%dT%H:%M:%S"
 
         event = {
-            "summary": class_["summary"],
-            "location": class_["location"],
+            "summary": lesson["summary"],
+            "location": lesson["location"],
             "start": {
-                "dateTime": class_["start_time"].strftime(date_format),
+                "dateTime": f"{lesson['date']}T{lesson['start_time']}:00",
                 "timeZone": "Europe/Moscow",
             },
             "end": {
-                "dateTime": class_["end_time"].strftime(date_format),
+                "dateTime": f"{lesson['date']}T{lesson['end_time']}:00",
                 "timeZone": "Europe/Moscow",
             },
-            "description": class_["description"],
+            "description": lesson["description"],
         }
 
-        if class_.get("lecturerEmail"):
-            event["attendees"] = [{"email": class_["lecturerEmail"]}]
-            if class_.get("grp_emails"):
-                event["attendees"] += [{"email": grp} for grp in class_["grp_emails"]]
+        if lesson.get("ruz_lecturer_email"):
+            event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
+            if lesson.get("grp_emails"):
+                event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 
             event["reminders"] = {"useDefault": True}
 
