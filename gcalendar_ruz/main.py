@@ -64,7 +64,6 @@ class CalendarManager:
                     lesson["gcalendar_event_id"] = event["id"]
                     nvr_api.add_lesson(lesson)
                     self.create_record(room, event)
-                    return
                 time.sleep(10)
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
