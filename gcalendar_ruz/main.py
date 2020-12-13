@@ -6,6 +6,7 @@ import logging
 from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
+from core.apis import nvr_api
 
 
 def create_logger(mode="INFO"):
@@ -49,7 +50,7 @@ class CalendarManager:
         for room in rooms:
             if not room.sources:
                 continue
-            
+
             try:
                 classes = self.ruz_api.get_classes(room.ruz_id)
             except Exception:
@@ -58,8 +59,11 @@ class CalendarManager:
             for i in range(0, len(classes), 10):
                 chunk = classes[i : i + 10]
                 logger.info(f"Adding classes: {chunk}")
-                for class_ in chunk:
-                    event = self.calendar_api.create_event_(room.calendar, class_)
+                for lesson in chunk:
+                    event = self.calendar_api.create_event(room.calendar, lesson)
+                    lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = room.calendar
+                    nvr_api.add_lesson(lesson)
                     self.create_record(room, event)
                 time.sleep(10)
 
@@ -82,23 +86,31 @@ class CalendarManager:
             for i in range(0, classes_len, 10):
                 chunk = classes[i : i + 10]
                 ruz_classes = [
-                    class_
-                    for class_ in chunk
-                    if class_["url"] is None or "meet.miem.hse.ru" not in class_["url"]
+                    lesson
+                    for lesson in chunk
+                    if lesson["ruz_url"] is None
+                    or "meet.miem.hse.ru" not in lesson["ruz_url"]
                 ]
                 jitsi_classes = [
                     class_
                     for class_ in chunk
-                    if class_["url"] is not None and "meet.miem.hse.ru" in class_["url"]
+                    if class_["ruz_url"] is not None
+                    and "meet.miem.hse.ru" in class_["ruz_url"]
                 ]
 
                 logger.info(f"Adding ruz classes: {ruz_classes}")
-                for class_ in ruz_classes:
-                    self.calendar_api.create_event_(ruz.calendar, class_)
+                for lesson in ruz_classes:
+                    event = self.calendar_api.create_event(ruz.calendar, lesson)
+                    lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = ruz.calendar
+                    nvr_api.add_lesson(lesson)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
-                for class_ in jitsi_classes:
-                    self.calendar_api.create_event_(jitsi.calendar, class_)
+                for lesson in jitsi_classes:
+                    event = self.calendar_api.create_event(jitsi.calendar, lesson)
+                    lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = jitsi.calendar
+                    nvr_api.add_lesson(lesson)
 
                 time.sleep(10)
 
