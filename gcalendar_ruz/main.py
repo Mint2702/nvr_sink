@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 import logging
 
 
-from core.apis.ruz_api import RuzApi
-from core.apis.calendar_api import GCalendar
-from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
-from core.apis import nvr_api
+# from core.apis.ruz_api import RuzApi
+# from core.apis.calendar_api import GCalendar
+# from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
+# from core.apis import nvr_api
 
 
 def create_logger(mode="INFO"):
@@ -31,7 +31,7 @@ def create_logger(mode="INFO"):
 
 logger = create_logger()
 
-
+"""
 class CalendarManager:
     def __init__(self):
         self.session = Session()
@@ -146,9 +146,11 @@ class CalendarManager:
         events = self.calendar_api.get_events(ruz.calendar)
         for event in events:
             self.calendar_api.delete_event(ruz.calendar, event["id"])
-
+"""
 
 if __name__ == "__main__":
-    manager = CalendarManager()
-    manager.fetch_offline_rooms()
-    manager.fetch_online_rooms()
+    # manager = CalendarManager()
+    # manager.fetch_offline_rooms()
+    # manager.fetch_online_rooms()
+    # from core.redis import caching
+    from core.apis import ruz_api

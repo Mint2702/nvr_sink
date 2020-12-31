@@ -3,8 +3,10 @@ from datetime import datetime, timedelta
 
 from . import nvr_api
 from ..utils import camel_to_snake
+from ..redis.caching import cach
 
 
+"""
 class RuzApi:
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
         self.url = url
@@ -16,20 +18,17 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     # function that requests information about classes for 1 day from today and returns list of dicts
     def get_classes(self, ruz_room_id: str, online: bool = False):
-        """
+        ###
         Get classes in room for 1 week
-        """
+        ###
         needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         res = requests.get(f"{self.url}/lessons", params=params)
 
@@ -78,3 +77,21 @@ class RuzApi:
             classes.append(lesson)
 
         return classes
+"""
+
+url = "http://92.242.58.221/ruzservice.svc"
+
+
+@cach
+def get_auditoriumoid(key="auditories"):
+    all_auditories = requests.get(f"{url}/auditoriums?buildingoid=0").json()
+
+    return [
+        room
+        for room in all_auditories
+        if room["buildingGid"] == 92 and room["typeOfAuditorium"] != "Неаудиторные"
+    ]
+
+
+first = get_auditoriumoid(key="auditories")
+# second = get_auditoriumoid()
