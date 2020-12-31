@@ -37,8 +37,8 @@ class CalendarManager:
         self.session = Session()
         self.ruz_api = RuzApi()
         self.calendar_api = GCalendar(
-            "/gcalendar_ruz/creds/creds.json",
-            "/gcalendar_ruz/creds/tokenCalendar.pickle",
+            "core/creds/credentials.json",
+            "core/creds/tokenCalendar.pickle",
         )
 
     def __del__(self):
@@ -88,14 +88,12 @@ class CalendarManager:
                 ruz_classes = [
                     lesson
                     for lesson in chunk
-                    if lesson["ruz_url"] is None
-                    or "meet.miem.hse.ru" not in lesson["ruz_url"]
+                    if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]
                 ]
                 jitsi_classes = [
                     class_
                     for class_ in chunk
-                    if class_["ruz_url"] is not None
-                    and "meet.miem.hse.ru" in class_["ruz_url"]
+                    if class_["ruz_url"] is not None and "meet.miem.hse.ru" in class_["ruz_url"]
                 ]
 
                 logger.info(f"Adding ruz classes: {ruz_classes}")
@@ -114,9 +112,7 @@ class CalendarManager:
 
                 time.sleep(10)
 
-        logger.info(
-            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
-        )
+        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
 
     def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -125,9 +121,7 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = (
-            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
-        )
+        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
         if not creator:
             return
 
