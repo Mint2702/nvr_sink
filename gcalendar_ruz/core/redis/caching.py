@@ -54,7 +54,6 @@ def cach(key: str):
             for arg_name, arg_value in kwargs.items():
                 if arg_name[0] == "_":
                     new_key = f"{key}_{arg_value}"
-                    print(new_key)
                     break
             data = get_routes_from_cache(new_key)
 
@@ -65,9 +64,11 @@ def cach(key: str):
                 print("Время выполнения: {} секунд.".format(end - start))
                 return data
 
+            print("Getting data from remote source")
             data = func(*args, **kwargs)
             if data:
                 data = json.dumps(data)
+                print(new_key)
                 state = set_routes_to_cache(key=new_key, value=data)
 
                 if state is True:

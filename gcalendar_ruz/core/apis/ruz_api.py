@@ -18,8 +18,7 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     # function that requests information about classes for 1 day from today and returns list of dicts
@@ -31,9 +30,7 @@ class RuzApi:
 
         needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id))
 
         res = requests.get(f"{self.url}/lessons", params=params)
 
@@ -59,7 +56,7 @@ class RuzApi:
 
             if lesson["ruz_group"] is not None:
                 stream = lesson["ruz_group"].split("#")[0]
-                grp_emails = nvr_api.get_course_emails(_course_code=stream)
+                grp_emails = nvr_api.get_course_emails(stream)
                 if grp_emails is not None:
                     lesson["grp_emails"] = grp_emails
             else:

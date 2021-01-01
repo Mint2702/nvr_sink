@@ -1,12 +1,12 @@
-import time
+# import time
 from datetime import datetime, timedelta
 import logging
 
 
-# from core.apis.ruz_api import RuzApi
-# from core.apis.calendar_api import GCalendar
-# from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
-# from core.apis import nvr_api
+from core.apis.ruz_api import RuzApi
+from core.apis.calendar_api import GCalendar
+from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
+from core.apis import nvr_api
 
 
 def create_logger(mode="INFO"):
@@ -31,7 +31,7 @@ def create_logger(mode="INFO"):
 
 logger = create_logger()
 
-"""
+
 class CalendarManager:
     def __init__(self):
         self.session = Session()
@@ -52,7 +52,7 @@ class CalendarManager:
                 continue
 
             try:
-                classes = self.ruz_api.get_classes(room.ruz_id)
+                classes = self.ruz_api.get_classes(_ruz_room_id=room.ruz_id)
             except Exception:
                 continue
 
@@ -65,19 +65,20 @@ class CalendarManager:
                     lesson["gcalendar_calendar_id"] = room.calendar
                     nvr_api.add_lesson(lesson)
                     self.create_record(room, event)
-                time.sleep(10)
+                # time.sleep(10)
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
     def fetch_online_rooms(self):
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
+        print(f"\n\n\n{jitsi}\n\n\n")
 
         rooms = self.ruz_api.get_auditoriumoid()
 
         for room in rooms:
             try:
-                classes = self.ruz_api.get_classes(room["auditoriumOid"], online=True)
+                classes = self.ruz_api.get_classes(_ruz_room_id=room["auditoriumOid"], online=True)
                 classes_len = len(classes)
             except Exception as err:
                 logger.error(err, exc_info=True)
@@ -105,12 +106,17 @@ class CalendarManager:
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
-                    event = self.calendar_api.create_event(jitsi.calendar, lesson)
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = jitsi.calendar
+                    try:
+                        event = self.calendar_api.create_event(
+                            jitsi.calendar, lesson
+                        )  # Тут постоянно ошибка потому что jitsi пустует почему-то
+                        lesson["gcalendar_event_id"] = event["id"]
+                        lesson["gcalendar_calendar_id"] = jitsi.calendar
+                    except:
+                        print("Jitsi was empty for some reason")
                     nvr_api.add_lesson(lesson)
 
-                time.sleep(10)
+                # time.sleep(10)
 
         logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
 
@@ -139,18 +145,16 @@ class CalendarManager:
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
-        events = self.calendar_api.get_events(jitsi.calendar)
+        events = self.calendar_api.get_events(_calendar_id=jitsi.calendar)
         for event in events:
             self.calendar_api.delete_event(jitsi.calendar, event["id"])
 
-        events = self.calendar_api.get_events(ruz.calendar)
+        events = self.calendar_api.get_events(_calendar_id=ruz.calendar)
         for event in events:
             self.calendar_api.delete_event(ruz.calendar, event["id"])
-"""
+
 
 if __name__ == "__main__":
-    # manager = CalendarManager()
-    # manager.fetch_offline_rooms()
-    # manager.fetch_online_rooms()
-    # from core.redis import caching
-    from core.apis import ruz_api
+    manager = CalendarManager()
+    manager.fetch_offline_rooms()
+    manager.fetch_online_rooms()
