@@ -11,11 +11,13 @@ PORT = settings.port
 
 
 def redis_connect() -> redis.client.Redis:
+    """ Connecting with redis """
+
     try:
         client = redis.Redis(host=HOST, port=PORT)
         ping = client.ping()
         if ping is True:
-            print("OK")
+            print("Connection successful")
             return client
     except Exception:
         print("Exception")
@@ -36,39 +38,50 @@ def set_routes_to_cache(key: str, value: str) -> bool:
     return state
 
 
-def cach(func):
-    import time
+def cach(key: str):
+    def decorator(func):
+        import time
 
-    def wrapper(key: str, *args, **kwargs) -> dict:
-        """ Decorator """
+        def wrapper(*args, **kwargs) -> dict:
+            """
+            Checks if info with given key is in redis
+            If it is, returns data, if not, sends a request
+            If a function has it's unique value that needs to be used as a key in redis, it must start with '_'
+            """
 
-        start = time.time()
-        data = get_routes_from_cache(key)
+            start = time.time()
+            new_key = key
+            for arg_name, arg_value in kwargs.items():
+                if arg_name[0] == "_":
+                    new_key = f"{key}_{arg_value}"
+                    print(new_key)
+                    break
+            data = get_routes_from_cache(new_key)
 
-        if data is not None:
-            data = json.loads(data)
-            print("Cach")
-            # data["cache"] = True
-            end = time.time()
-            print("[*] Время выполнения: {} секунд.".format(end - start))
-            return data
+            if data is not None:
+                data = json.loads(data)
+                print("Getting data from cach")
+                end = time.time()
+                print("Время выполнения: {} секунд.".format(end - start))
+                return data
 
-        else:
             data = func(*args, **kwargs)
             if data:
-                # data["cache"] = False
                 data = json.dumps(data)
-                state = set_routes_to_cache(key=key, value=data)
+                state = set_routes_to_cache(key=new_key, value=data)
 
                 if state is True:
                     end = time.time()
-                    print("[*] Время выполнения: {} секунд.".format(end - start))
+                    print("Время выполнения: {} секунд.".format(end - start))
                     return json.loads(data)
-        end = time.time()
-        print("[*] Время выполнения: {} секунд.".format(end - start))
-        return data
 
-    return wrapper
+            end = time.time()
+            print("Время выполнения: {} секунд.".format(end - start))
+            return data
+
+        return wrapper
+
+    return decorator
 
 
 client = redis_connect()
