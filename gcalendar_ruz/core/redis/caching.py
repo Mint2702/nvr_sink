@@ -38,7 +38,7 @@ def set_routes_to_cache(key: str, value: str) -> bool:
     return state
 
 
-def cach(key: str):
+def cache(key: str):
     def decorator(func):
         import time
 
