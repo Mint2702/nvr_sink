@@ -1,4 +1,4 @@
-# import time
+import time
 from datetime import datetime, timedelta
 import logging
 
@@ -73,7 +73,6 @@ class CalendarManager:
     def fetch_online_rooms(self):
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
-        print(f"\n\n\n{jitsi}\n\n\n")
 
         rooms = self.ruz_api.get_auditoriumoid()
 
@@ -160,6 +159,9 @@ class CalendarManager:
 
 
 if __name__ == "__main__":
+    start = time.time()
     manager = CalendarManager()
     manager.fetch_offline_rooms()
     manager.fetch_online_rooms()
+    end = time.time()
+    print("Время выполнения: {} секунд.".format(end - start))
