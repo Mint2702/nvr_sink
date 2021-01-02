@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from . import nvr_api
 from ..utils import camel_to_snake
+from ..redis.caching import cach
 
 
 class RuzApi:
@@ -10,26 +11,26 @@ class RuzApi:
         self.url = url
 
     # building id МИЭМа = 92
+    @cach("auditories")
     def get_auditoriumoid(self, building_id: int = 92):
         all_auditories = requests.get(f"{self.url}/auditoriums?buildingoid=0").json()
 
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     # function that requests information about classes for 1 day from today and returns list of dicts
-    def get_classes(self, ruz_room_id: str, online: bool = False):
+    @cach("class")
+    def get_classes(self, _ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
         """
-        needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
+
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id))
 
         res = requests.get(f"{self.url}/lessons", params=params)
 

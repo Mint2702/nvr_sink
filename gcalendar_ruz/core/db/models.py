@@ -1,6 +1,4 @@
-import os
 from datetime import datetime
-
 from sqlalchemy import (
     Column,
     Integer,
@@ -14,8 +12,11 @@ from sqlalchemy.sql.expression import func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
+from ..settings import settings
+
+
 Base = declarative_base()
-engine = create_engine(os.environ.get("DB_URL"))
+engine = create_engine(settings.db_url)
 Session = sessionmaker(bind=engine)
 
 

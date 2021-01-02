@@ -6,6 +6,8 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from ..redis.caching import cach
+
 
 class GCalendar:
     def __init__(
@@ -63,23 +65,22 @@ class GCalendar:
 
             event["reminders"] = {"useDefault": True}
 
-        event = (
-            self.service.events().insert(calendarId=calendar_id, body=event).execute()
-        )
+        event = self.service.events().insert(calendarId=calendar_id, body=event).execute()
 
         return event
 
     def delete_event(self, calendar_id, event_id):
         self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
 
-    def get_events(self, calendar_id: str) -> dict:
+    @cach("events")
+    def get_events(self, _calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
         nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
         events_result = (
             self.service.events()
             .list(
-                calendarId=calendar_id,
+                calendarId=_calendar_id,
                 timeMin=nowISO,
                 timeMax=nowffISO,
                 singleEvents=True,
