@@ -20,7 +20,7 @@ def redis_connect() -> redis.client.Redis:
             print("Connection successful")
             return client
     except Exception:
-        print("Exception")
+        print("Connection with redis failed")
         sys.exit(1)
 
 
@@ -34,7 +34,7 @@ def get_routes_from_cache(key: str) -> str:
 def set_routes_to_cache(key: str, value: str) -> bool:
     """ Set data to redis """
 
-    state = client.setex(key, timedelta(seconds=300), value=value)
+    state = client.setex(key, timedelta(seconds=600), value=value)
     return state
 
 

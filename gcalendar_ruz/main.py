@@ -61,6 +61,7 @@ class CalendarManager:
                 logger.info(f"Adding classes: {chunk}")
                 for lesson in chunk:
                     event = self.calendar_api.create_event(room.calendar, lesson)
+                    lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = room.calendar
                     nvr_api.add_lesson(lesson)
@@ -100,9 +101,12 @@ class CalendarManager:
                 logger.info(f"Adding ruz classes: {ruz_classes}")
                 for lesson in ruz_classes:
                     event = self.calendar_api.create_event(ruz.calendar, lesson)
+                    lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = ruz.calendar
-                    nvr_api.add_lesson(lesson)
+                    nvr_api.add_lesson(
+                        lesson
+                    )  # Еще тут иногда кидает ошибку на ruz_lecturer_email, что значение None
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
@@ -112,6 +116,7 @@ class CalendarManager:
                         )  # Тут постоянно ошибка потому что jitsi пустует почему-то
                         lesson["gcalendar_event_id"] = event["id"]
                         lesson["gcalendar_calendar_id"] = jitsi.calendar
+                        lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     except:
                         print("Jitsi was empty for some reason")
                     nvr_api.add_lesson(lesson)
