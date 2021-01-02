@@ -1,6 +1,7 @@
 import os.path
 import pickle
 from datetime import datetime, timedelta
+from aiohttp import ClientSession
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -34,7 +35,7 @@ class GCalendar:
 
         self.service = build("calendar", "v3", credentials=creds)
 
-    def create_event(
+    async def create_event(
         self,
         calendar_id: str,
         lesson: dict,
@@ -61,32 +62,42 @@ class GCalendar:
         if lesson.get("ruz_lecturer_email"):
             event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
             if lesson.get("grp_emails"):
-                event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
+                event["attendees"] += [{"email": grp} for grp in await lesson["grp_emails"]]
 
             event["reminders"] = {"useDefault": True}
 
-        event = self.service.events().insert(calendarId=calendar_id, body=event).execute()
+        print(event)
 
-        return event
+        async with ClientSession() as session:
+            event_post = await session.post(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events", body=event
+            )
+            async with event_post:
+                event_json = event_post.json()
 
-    def delete_event(self, calendar_id, event_id):
-        self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+        return event_json
+
+    async def delete_event(self, calendar_id, event_id):
+        async with ClientSession() as session:
+            await session.delete(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+            )
 
     @cach("events")
-    def get_events(self, _calendar_id: str) -> dict:
+    async def get_events(self, _calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
         nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
-        events_result = (
-            self.service.events()
-            .list(
-                calendarId=_calendar_id,
+        async with ClientSession() as session:
+            events_result = await session.get(
+                f"https://www.googleapis.com/calendar/v3/calendars/{_calendar_id}/events",
                 timeMin=nowISO,
                 timeMax=nowffISO,
                 singleEvents=True,
                 orderBy="startTime",
             )
-            .execute()
-        )
+            async with events_result:
+                events_result = events_result.json()
+
         events = events_result.get("items", [])
         return events

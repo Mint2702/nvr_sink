@@ -3,6 +3,7 @@ from aredis import StrictRedis
 import sys
 from datetime import timedelta
 import json
+import copy
 
 from ..settings import settings
 
@@ -41,8 +42,6 @@ async def set_routes_to_cache(key: str, value: str) -> bool:
 
 def cach(key: str):
     def decorator(func):
-        import time
-
         async def wrapper(*args, **kwargs) -> dict:
             """
             Checks if info with given key is in redis
@@ -58,36 +57,35 @@ def cach(key: str):
             data = await get_routes_from_cache(new_key)
 
             if data is not None:
-                data = json.loads(data)
                 print("Getting data from cach")
-                return data
+                data_list = copy.deepcopy(data)
+                data_list = json.loads(data_list)
+                return data_list
 
             print("Getting data from remote source")
             data = await func(*args, **kwargs)
             if data:
-                data = json.dumps(data)
-                print(new_key)
-                state = set_routes_to_cache(key=new_key, value=data)
-
+                print(type(data))
+                data_list = copy.deepcopy(list(data))
+                print(type(data_list))
+                data_list = json.dumps(data_list)
+                # new_data = json.dumps(data)
+                state = await set_routes_to_cache(key=new_key, value=data_list)
                 if state is True:
-                    return json.loads(data)
+                    return json.loads(data_list)
 
-            return data
+            return []
 
         return wrapper
 
     return decorator
 
 
-@cach("lol")
-async def job(*args, **kwargs):
-    print("example_results")
-
-
 async def main():
+    """ Creating redis client """
+
     global client
     client = await redis_connect()
-    await job(111)
 
 
 asyncio.run(main())

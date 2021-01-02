@@ -1,4 +1,4 @@
-import requests
+from aiohttp import ClientSession
 from datetime import datetime, timedelta
 
 from . import nvr_api
@@ -12,8 +12,11 @@ class RuzApi:
 
     # building id МИЭМа = 92
     @cach("auditories")
-    def get_auditoriumoid(self, building_id: int = 92):
-        all_auditories = requests.get(f"{self.url}/auditoriums?buildingoid=0").json()
+    async def get_auditoriumoid(self, building_id: int = 92):
+        async with ClientSession() as session:
+            res = await session.get(f"{self.url}/auditoriums?buildingoid=0")
+            async with res:
+                all_auditories = await res.json()
 
         return [
             room
@@ -23,7 +26,7 @@ class RuzApi:
 
     # function that requests information about classes for 1 day from today and returns list of dicts
     @cach("class")
-    def get_classes(self, _ruz_room_id: str, online: bool = False):
+    async def get_classes(self, _ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
         """
@@ -32,10 +35,13 @@ class RuzApi:
 
         params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id))
 
-        res = requests.get(f"{self.url}/lessons", params=params)
+        async with ClientSession() as session:
+            res = await session.get(f"{self.url}/lessons", params=params)
+            async with res:
+                res = await res.json()
 
         classes = []
-        for class_ in res.json():
+        for class_ in res:
             lesson = {}
 
             date = class_.pop("date")
