@@ -159,9 +159,12 @@ class CalendarManager:
 
 
 if __name__ == "__main__":
+    """
     start = time.time()
     manager = CalendarManager()
     manager.fetch_offline_rooms()
     manager.fetch_online_rooms()
     end = time.time()
     print("Время выполнения: {} секунд.".format(end - start))
+    """
+    from core.redis import caching
