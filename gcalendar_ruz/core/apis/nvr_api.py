@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 import asyncio
-import logging
+from loguru import logger
 
 from ..settings import settings
 
@@ -8,20 +8,16 @@ from ..settings import settings
 NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
 NVR_API_KEY = settings.nvr_api_key
 
-logger = logging.getLogger("ruz_logger")
-
 
 async def get_course_emails(course_code: str):
     """ Gets emails from a GET responce from Erudite """
 
     async with ClientSession() as session:
-        res = await session.get(
-            f"{NVR_API_URL}/disciplines", params={"course_code": course_code}
-        )
+        res = await session.get(f"{NVR_API_URL}/disciplines", params={"course_code": course_code})
         async with res:
             data = await res.json()
 
-    print(
+    logger.info(
         f"nvr.get_course_emails returned {res.status}, with body {await res.text()}"
     )  # Change to logger after
 

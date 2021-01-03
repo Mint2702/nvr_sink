@@ -1,35 +1,12 @@
 import time
 from datetime import datetime, timedelta
-import logging
 import asyncio
+from loguru import logger
 
 from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 from core.apis import nvr_api
-
-
-def create_logger(mode="INFO"):
-    logs = {"INFO": logging.INFO, "DEBUG": logging.DEBUG}
-
-    logger = logging.getLogger("ruz_logger")
-    logger.setLevel(logs[mode])
-
-    handler = logging.StreamHandler()
-    handler.setLevel(logs[mode])
-
-    formatter = logging.Formatter(
-        "%(levelname)-8s  %(asctime)s    %(message)s", datefmt="%d-%m-%Y %I:%M:%S %p"
-    )
-
-    handler.setFormatter(formatter)
-
-    logger.addHandler(handler)
-
-    return logger
-
-
-logger = create_logger()
 
 
 class CalendarManager:
@@ -124,13 +101,10 @@ class CalendarManager:
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
-                    try:
-                        async with sem_google:
-                            event = await self.calendar_api.create_event(jitsi.calendar, lesson)
-                        lesson["gcalendar_event_id"] = event["id"]
-                        lesson["gcalendar_calendar_id"] = jitsi.calendar
-                    except:
-                        print("Jitsi was empty for some reason")
+                    async with sem_google:
+                        event = await self.calendar_api.create_event(jitsi.calendar, lesson)
+                    lesson["gcalendar_event_id"] = event["id"]
+                    lesson["gcalendar_calendar_id"] = jitsi.calendar
                     async with sem_nvr:
                         await nvr_api.add_lesson(lesson)
 
@@ -170,10 +144,12 @@ class CalendarManager:
             await self.calendar_api.delete_event(ruz.calendar, event["id"])
 
 
+@logger.catch
 async def main():
     sem_google = asyncio.Semaphore(10)
     sem_ruz = asyncio.Semaphore(10)
     sem_nvr = asyncio.Semaphore(10)
+
     manager = CalendarManager()
     await manager.fetch_offline_rooms(sem_google, sem_ruz, sem_nvr)
     await manager.fetch_online_rooms(sem_google, sem_ruz, sem_nvr)
@@ -183,4 +159,4 @@ if __name__ == "__main__":
     start = time.time()
     asyncio.run(main())
     end = time.time()
-    print("Время выполнения: {} секунд.".format(end - start))
+    logger.info("Время выполнения: {} секунд.".format(end - start))

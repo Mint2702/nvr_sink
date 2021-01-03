@@ -71,8 +71,6 @@ class GCalendar:
 
             event["reminders"] = {"useDefault": True}
 
-        print(event)
-
         async with ClientSession() as session:
             event_post = await session.post(
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",

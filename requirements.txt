@@ -8,3 +8,4 @@ oauth2client
 aredis
 pydantic
 aiohttp
+loguru

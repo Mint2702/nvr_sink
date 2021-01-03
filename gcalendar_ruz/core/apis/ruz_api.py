@@ -21,22 +21,19 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
-    # function that requests information about classes for 1 day from today and returns list of dicts
     @cache
     async def get_classes(self, ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
+        Function that requests information about classes for 1 day from today and returns list of dicts
         """
 
         needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
