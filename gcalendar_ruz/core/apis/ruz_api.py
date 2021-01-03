@@ -27,7 +27,7 @@ class RuzApi:
 
     # function that requests information about classes for 1 day from today and returns list of dicts
     @cache
-    async def get_classes(self, _ruz_room_id: str, online: bool = False):
+    async def get_classes(self, ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
         """
@@ -35,7 +35,7 @@ class RuzApi:
         needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
 
         params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id)
+            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
         )
 
         async with ClientSession() as session:

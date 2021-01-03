@@ -44,7 +44,12 @@ class CalendarManager:
     def __del__(self):
         self.session.close()
 
-    async def fetch_offline_rooms(self):
+    async def fetch_offline_rooms(
+        self,
+        sem_google: asyncio.Semaphore,
+        sem_ruz: asyncio.Semaphore,
+        sem_nvr: asyncio.Semaphore,
+    ):
         rooms = self.session.query(Room).all()
 
         for room in rooms:
@@ -52,8 +57,8 @@ class CalendarManager:
                 continue
 
             try:
-                classes = await self.ruz_api.get_classes(_ruz_room_id=room.ruz_id)
-                print(classes)
+                async with sem_ruz:
+                    classes = await self.ruz_api.get_classes(room.ruz_id)
             except Exception:
                 continue
 
@@ -61,25 +66,32 @@ class CalendarManager:
                 chunk = classes[i : i + 10]
                 logger.info(f"Adding classes: {chunk}")
                 for lesson in chunk:
-                    event = await self.calendar_api.create_event(room.calendar, lesson)
+                    async with sem_google:
+                        event = await self.calendar_api.create_event(room.calendar, lesson)
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = room.calendar
-                    await nvr_api.add_lesson(lesson)
+                    async with sem_nvr:
+                        await nvr_api.add_lesson(lesson)
                     await self.create_record(room, event)
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
-    async def fetch_online_rooms(self):
+    async def fetch_online_rooms(
+        self,
+        sem_google: asyncio.Semaphore,
+        sem_ruz: asyncio.Semaphore,
+        sem_nvr: asyncio.Semaphore,
+    ):
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
-        rooms = await self.ruz_api.get_auditoriumoid()
+        async with sem_ruz:
+            rooms = await self.ruz_api.get_auditoriumoid()
 
         for room in rooms:
             try:
-                classes = await self.ruz_api.get_classes(
-                    _ruz_room_id=room["auditoriumOid"], online=True
-                )
+                async with sem_ruz:
+                    classes = await self.ruz_api.get_classes(room["auditoriumOid"], online=True)
                 classes_len = len(classes)
             except Exception as err:
                 logger.error(err, exc_info=True)
@@ -90,38 +102,39 @@ class CalendarManager:
                 ruz_classes = [
                     lesson
                     for lesson in chunk
-                    if lesson["ruz_url"] is None
-                    or "meet.miem.hse.ru" not in lesson["ruz_url"]
+                    if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]
                 ]
                 jitsi_classes = [
                     class_
                     for class_ in chunk
-                    if class_["ruz_url"] is not None
-                    and "meet.miem.hse.ru" in class_["ruz_url"]
+                    if class_["ruz_url"] is not None and "meet.miem.hse.ru" in class_["ruz_url"]
                 ]
 
                 logger.info(f"Adding ruz classes: {ruz_classes}")
                 for lesson in ruz_classes:
-                    event = await self.calendar_api.create_event(ruz.calendar, lesson)
-                    lesson["gcalendar_event_id"] = event["id"]
+                    async with sem_google:
+                        event = await self.calendar_api.create_event(ruz.calendar, lesson)
+                    try:  # Не забыть убрать на проде!!!
+                        lesson["gcalendar_event_id"] = event["id"]
+                    except:
+                        continue
                     lesson["gcalendar_calendar_id"] = ruz.calendar
-                    await nvr_api.add_lesson(lesson)
+                    async with sem_nvr:
+                        await nvr_api.add_lesson(lesson)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
                     try:
-                        event = await self.calendar_api.create_event(
-                            jitsi.calendar, lesson
-                        )
+                        async with sem_google:
+                            event = await self.calendar_api.create_event(jitsi.calendar, lesson)
                         lesson["gcalendar_event_id"] = event["id"]
                         lesson["gcalendar_calendar_id"] = jitsi.calendar
                     except:
                         print("Jitsi was empty for some reason")
-                    await nvr_api.add_lesson(lesson)
+                    async with sem_nvr:
+                        await nvr_api.add_lesson(lesson)
 
-        logger.info(
-            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
-        )
+        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
 
     async def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -130,9 +143,7 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = (
-            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
-        )
+        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
         if not creator:
             return
 
@@ -150,19 +161,22 @@ class CalendarManager:
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
-        events = await self.calendar_api.get_events(_calendar_id=jitsi.calendar)
+        events = await self.calendar_api.get_events(jitsi.calendar)
         for event in events:
             await self.calendar_api.delete_event(jitsi.calendar, event["id"])
 
-        events = await self.calendar_api.get_events(_calendar_id=ruz.calendar)
+        events = await self.calendar_api.get_events(ruz.calendar)
         for event in events:
             await self.calendar_api.delete_event(ruz.calendar, event["id"])
 
 
 async def main():
+    sem_google = asyncio.Semaphore(10)
+    sem_ruz = asyncio.Semaphore(10)
+    sem_nvr = asyncio.Semaphore(10)
     manager = CalendarManager()
-    await manager.fetch_offline_rooms()
-    # await manager.fetch_online_rooms()
+    await manager.fetch_offline_rooms(sem_google, sem_ruz, sem_nvr)
+    await manager.fetch_online_rooms(sem_google, sem_ruz, sem_nvr)
 
 
 if __name__ == "__main__":

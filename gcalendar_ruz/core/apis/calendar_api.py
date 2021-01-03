@@ -91,13 +91,13 @@ class GCalendar:
             )
 
     @cache
-    async def get_events(self, _calendar_id: str) -> dict:
+    async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
         nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
         async with ClientSession() as session:
             events_result = await session.get(
-                f"https://www.googleapis.com/calendar/v3/calendars/{_calendar_id}/events",
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
                 timeMin=nowISO,
                 timeMax=nowffISO,
                 singleEvents=True,
