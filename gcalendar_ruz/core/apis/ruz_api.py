@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from . import nvr_api
 from ..utils import camel_to_snake
-from ..redis.caching import cach
+from ..redis.caching import cache
 
 
 class RuzApi:
@@ -11,7 +11,7 @@ class RuzApi:
         self.url = url
 
     # building id МИЭМа = 92
-    @cach("auditories")
+    @cache
     async def get_auditoriumoid(self, building_id: int = 92):
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/auditoriums?buildingoid=0")
@@ -21,11 +21,12 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id
+            and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     # function that requests information about classes for 1 day from today and returns list of dicts
-    @cach("class")
+    @cache
     async def get_classes(self, _ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
@@ -33,7 +34,9 @@ class RuzApi:
 
         needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
 
-        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id))
+        params = dict(
+            fromdate=needed_date, todate=needed_date, auditoriumoid=str(_ruz_room_id)
+        )
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
@@ -62,7 +65,7 @@ class RuzApi:
 
             if lesson["ruz_group"] is not None:
                 stream = lesson["ruz_group"].split("#")[0]
-                grp_emails = nvr_api.get_course_emails(stream)
+                grp_emails = await nvr_api.get_course_emails(stream)
                 if grp_emails is not None:
                     lesson["grp_emails"] = grp_emails
             else:

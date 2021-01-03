@@ -62,12 +62,10 @@ class CalendarManager:
                 logger.info(f"Adding classes: {chunk}")
                 for lesson in chunk:
                     event = await self.calendar_api.create_event(room.calendar, lesson)
-                    lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = room.calendar
                     await nvr_api.add_lesson(lesson)
                     await self.create_record(room, event)
-                # time.sleep(10)
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
@@ -92,40 +90,38 @@ class CalendarManager:
                 ruz_classes = [
                     lesson
                     for lesson in chunk
-                    if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]
+                    if lesson["ruz_url"] is None
+                    or "meet.miem.hse.ru" not in lesson["ruz_url"]
                 ]
                 jitsi_classes = [
                     class_
                     for class_ in chunk
-                    if class_["ruz_url"] is not None and "meet.miem.hse.ru" in class_["ruz_url"]
+                    if class_["ruz_url"] is not None
+                    and "meet.miem.hse.ru" in class_["ruz_url"]
                 ]
 
                 logger.info(f"Adding ruz classes: {ruz_classes}")
                 for lesson in ruz_classes:
                     event = await self.calendar_api.create_event(ruz.calendar, lesson)
-                    lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = ruz.calendar
-                    await nvr_api.add_lesson(
-                        lesson
-                    )  # Еще тут иногда кидает ошибку на ruz_lecturer_email, что значение None
+                    await nvr_api.add_lesson(lesson)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
                     try:
                         event = await self.calendar_api.create_event(
                             jitsi.calendar, lesson
-                        )  # Тут постоянно ошибка потому что jitsi пустует почему-то
+                        )
                         lesson["gcalendar_event_id"] = event["id"]
                         lesson["gcalendar_calendar_id"] = jitsi.calendar
-                        lesson["id"] = event["id"]  # Иначе не получалось добавить в эрудит lesson
                     except:
                         print("Jitsi was empty for some reason")
                     await nvr_api.add_lesson(lesson)
 
-                # time.sleep(10)
-
-        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
+        logger.info(
+            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
+        )
 
     async def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -134,7 +130,9 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        creator = (
+            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        )
         if not creator:
             return
 
@@ -164,7 +162,7 @@ class CalendarManager:
 async def main():
     manager = CalendarManager()
     await manager.fetch_offline_rooms()
-    await manager.fetch_online_rooms()
+    # await manager.fetch_online_rooms()
 
 
 if __name__ == "__main__":

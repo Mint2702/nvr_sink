@@ -7,7 +7,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from ..redis.caching import cach
+from ..redis.caching import cache
 
 
 class GCalendar:
@@ -32,6 +32,11 @@ class GCalendar:
                 creds = flow.run_local_server(port=0)
             with open(token_path, "wb") as token:
                 pickle.dump(creds, token)
+
+        self.HEADERS = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {creds.token}",
+        }
 
         self.service = build("calendar", "v3", credentials=creds)
 
@@ -62,7 +67,7 @@ class GCalendar:
         if lesson.get("ruz_lecturer_email"):
             event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
             if lesson.get("grp_emails"):
-                event["attendees"] += [{"email": grp} for grp in await lesson["grp_emails"]]
+                event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 
             event["reminders"] = {"useDefault": True}
 
@@ -70,10 +75,12 @@ class GCalendar:
 
         async with ClientSession() as session:
             event_post = await session.post(
-                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events", body=event
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
+                json=event,
+                headers=self.HEADERS,
             )
             async with event_post:
-                event_json = event_post.json()
+                event_json = await event_post.json()
 
         return event_json
 
@@ -83,7 +90,7 @@ class GCalendar:
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
             )
 
-    @cach("events")
+    @cache
     async def get_events(self, _calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time

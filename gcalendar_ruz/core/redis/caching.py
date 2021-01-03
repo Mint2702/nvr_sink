@@ -3,7 +3,7 @@ from aredis import StrictRedis
 import sys
 from datetime import timedelta
 import json
-import copy
+from functools import wraps
 
 from ..settings import settings
 
@@ -40,45 +40,33 @@ async def set_routes_to_cache(key: str, value: str) -> bool:
     return state
 
 
-def cach(key: str):
-    def decorator(func):
-        async def wrapper(*args, **kwargs) -> dict:
-            """
-            Checks if info with given key is in redis
-            If it is, returns data, if not, sends a request
-            If a function has it's unique value that needs to be used as a key in redis, it must start with '_'
-            """
+def cache(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> dict:
+        """
+        Checks if info with given key is in redis
+        If it is, returns data, if not, sends a request
+        """
 
-            new_key = key
-            for arg_name, arg_value in kwargs.items():
-                if arg_name[0] == "_":
-                    new_key = f"{key}_{arg_value}"
-                    break
-            data = await get_routes_from_cache(new_key)
+        cache_key = f"{func.__name__}({args[1:]}, {kwargs})"
+        data = await get_routes_from_cache(cache_key)
 
-            if data is not None:
-                print("Getting data from cach")
-                data_list = copy.deepcopy(data)
-                data_list = json.loads(data_list)
-                return data_list
+        if data is not None:
+            print("Getting data from cach")
+            data = json.loads(data)
+            return data
 
-            print("Getting data from remote source")
-            data = await func(*args, **kwargs)
-            if data:
-                print(type(data))
-                data_list = copy.deepcopy(list(data))
-                print(type(data_list))
-                data_list = json.dumps(data_list)
-                # new_data = json.dumps(data)
-                state = await set_routes_to_cache(key=new_key, value=data_list)
-                if state is True:
-                    return json.loads(data_list)
+        print("Getting data from remote source")
+        data = await func(*args, **kwargs)
+        if data:
+            data = json.dumps(data)
+            state = await set_routes_to_cache(key=cache_key, value=data)
+            if state is True:
+                return json.loads(data)
 
-            return []
+        return []
 
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 async def main():

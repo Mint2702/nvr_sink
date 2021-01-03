@@ -1,4 +1,5 @@
 from aiohttp import ClientSession
+import asyncio
 import logging
 
 from ..settings import settings
@@ -10,12 +11,13 @@ NVR_API_KEY = settings.nvr_api_key
 logger = logging.getLogger("ruz_logger")
 
 
-# @cach("emails") - нет смысла кешировать эту функцию, так как она работает только вместе с функцией get_classes
 async def get_course_emails(course_code: str):
     """ Gets emails from a GET responce from Erudite """
 
     async with ClientSession() as session:
-        res = await session.get(f"{NVR_API_URL}/disciplines", params={"course_code": course_code})
+        res = await session.get(
+            f"{NVR_API_URL}/disciplines", params={"course_code": course_code}
+        )
         async with res:
             data = await res.json()
 
@@ -36,10 +38,12 @@ async def get_course_emails(course_code: str):
 
 
 async def add_lesson(lesson):
-    """ Posts a lesson to Erudite """
+    """Posts a lesson to Erudite
 
     async with ClientSession() as session:
         res = await session.post(
             f"{NVR_API_URL}/lessons", json=lesson, headers={"key": NVR_API_KEY}
         )
     logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
+    """
+    await asyncio.sleep(1)
