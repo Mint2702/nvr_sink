@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 import asyncio
 from loguru import logger
@@ -91,10 +90,7 @@ class CalendarManager:
                 for lesson in ruz_classes:
                     async with sem_google:
                         event = await self.calendar_api.create_event(ruz.calendar, lesson)
-                    try:  # Не забыть убрать на проде!!!
-                        lesson["gcalendar_event_id"] = event["id"]
-                    except:
-                        continue
+                    lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = ruz.calendar
                     async with sem_nvr:
                         await nvr_api.add_lesson(lesson)
@@ -156,7 +152,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    start = time.time()
     asyncio.run(main())
-    end = time.time()
-    logger.info("Время выполнения: {} секунд.".format(end - start))

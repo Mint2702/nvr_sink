@@ -4,6 +4,7 @@ import sys
 from datetime import timedelta
 import json
 from functools import wraps
+from loguru import logger
 
 from ..settings import settings
 
@@ -19,10 +20,10 @@ async def redis_connect() -> StrictRedis:
         client = StrictRedis(host=HOST, port=PORT)
         ping = await client.ping()
         if ping is True:
-            print("Connection successful")
+            logger.info("Connection successful")
             return client
     except Exception:
-        print("Connection with redis failed")
+        logger.error("Connection with redis failed")
         sys.exit(1)
 
 
@@ -52,11 +53,11 @@ def cache(func):
         data = await get_routes_from_cache(cache_key)
 
         if data is not None:
-            print("Getting data from cach")
+            logger.info("Getting data from cach")
             data = json.loads(data)
             return data
 
-        print("Getting data from remote source")
+        logger.info("Getting data from remote source")
         data = await func(*args, **kwargs)
         if data:
             data = json.dumps(data)

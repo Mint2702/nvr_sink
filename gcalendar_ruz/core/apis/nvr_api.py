@@ -17,9 +17,7 @@ async def get_course_emails(course_code: str):
         async with res:
             data = await res.json()
 
-    logger.info(
-        f"nvr.get_course_emails returned {res.status}, with body {await res.text()}"
-    )  # Change to logger after
+    logger.info(f"nvr.get_course_emails returned {res.status}, with body {await res.text()}")
 
     # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
     if type(data) == list:
@@ -34,12 +32,10 @@ async def get_course_emails(course_code: str):
 
 
 async def add_lesson(lesson):
-    """Posts a lesson to Erudite
+    """ Posts a lesson to Erudite """
 
     async with ClientSession() as session:
         res = await session.post(
             f"{NVR_API_URL}/lessons", json=lesson, headers={"key": NVR_API_KEY}
         )
     logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
-    """
-    await asyncio.sleep(1)
