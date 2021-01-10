@@ -39,4 +39,4 @@ async def add_lesson(lesson):
             f"{NVR_API_URL}/lessons", json=lesson, headers={"key": NVR_API_KEY}
         )
     logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")"""
-    return asyncio.sleep(1)  # Убрать на проде!!!!!!!!!
+    return await asyncio.sleep(0.2)  # Убрать на проде!!!!!!!!!
