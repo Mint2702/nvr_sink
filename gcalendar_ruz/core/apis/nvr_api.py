@@ -17,7 +17,7 @@ def get_course_emails(course_code):
         f"nvr.get_course_emails returned {res.status_code}, with body {res.text}"
     )
 
-    data = res.json()
+    data = res.json()[0]
     if data == []:
         return None
 
