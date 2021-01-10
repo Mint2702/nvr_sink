@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
-import asyncio
 from loguru import logger
+import asyncio
 
 from ..settings import settings
 
@@ -32,10 +32,11 @@ async def get_course_emails(course_code: str):
 
 
 async def add_lesson(lesson):
-    """ Posts a lesson to Erudite """
+    """Posts a lesson to Erudite
 
     async with ClientSession() as session:
         res = await session.post(
             f"{NVR_API_URL}/lessons", json=lesson, headers={"key": NVR_API_KEY}
         )
-    logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
+    logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")"""
+    return asyncio.sleep(1)  # Убрать на проде!!!!!!!!!

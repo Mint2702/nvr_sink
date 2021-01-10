@@ -21,8 +21,7 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     @cache
@@ -34,9 +33,7 @@ class RuzApi:
 
         needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)

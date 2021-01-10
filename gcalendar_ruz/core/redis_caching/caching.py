@@ -1,6 +1,5 @@
 import asyncio
 from aredis import StrictRedis
-import sys
 from datetime import timedelta
 import json
 from functools import wraps
@@ -24,7 +23,6 @@ async def redis_connect() -> StrictRedis:
             return client
     except Exception:
         logger.error("Connection with redis failed")
-        sys.exit(1)
 
 
 async def get_routes_from_cache(key: str) -> str:
@@ -49,23 +47,23 @@ def cache(func):
         If it is, returns data, if not, sends a request
         """
 
-        cache_key = f"{func.__name__}({args[1:]}, {kwargs})"
-        data = await get_routes_from_cache(cache_key)
+        if client:
+            cache_key = f"{func.__name__}({args[1:]}, {kwargs})"
+            data = await get_routes_from_cache(cache_key)
 
-        if data is not None:
-            logger.info("Getting data from cach")
-            data = json.loads(data)
-            return data
+            if data is not None:
+                logger.info("Getting data from cach")
+                data = json.loads(data)
+                return data
 
         logger.info("Getting data from remote source")
         data = await func(*args, **kwargs)
         if data:
-            data = json.dumps(data)
-            state = await set_routes_to_cache(key=cache_key, value=data)
-            if state is True:
-                return json.loads(data)
+            if client:
+                state = await set_routes_to_cache(key=cache_key, value=json.dumps(data))
+            return data
 
-        return []
+        return None
 
     return wrapper
 
