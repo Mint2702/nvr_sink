@@ -23,9 +23,13 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
+
+    async def appending_classes(
+        self,
+    ):
+        pass
 
     @cache
     @semlock("ruz")
@@ -39,9 +43,7 @@ class RuzApi:
             "%Y.%m.%d"
         )  # Не забыть поставить 1 день !!!!!!!!!!!!!!!!!
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)

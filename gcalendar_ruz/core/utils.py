@@ -1,8 +1,12 @@
 import re
 from functools import wraps
 import asyncio
-import sys
 from loguru import logger
+
+
+GOOGLE = "google"
+NVR = "nvr"
+RUZ = "ruz"
 
 
 def camel_to_snake(name):
@@ -10,23 +14,13 @@ def camel_to_snake(name):
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
-async def init_semaphore() -> asyncio.Semaphore:
-    return asyncio.Semaphore(10)
-
-
 def semlock(service: str):
     def wrap(func):
         @wraps(func)
         async def wrapper(*args, **kwargs) -> dict:
-            if service == "google":
-                sem = sem_google
-            elif service == "nvr":
-                sem = sem_nvr
-            elif service == "ruz":
-                sem = sem_ruz
-            else:
+            sem = sem_dict.get(service)
+            if not sem:
                 logger.error("Unsupported service")
-                sys.exit(1)
 
             async with sem:
                 logger.debug(f"{service} semaphore for function {func.__name__}")
@@ -41,10 +35,12 @@ async def main():
     global sem_google
     global sem_ruz
     global sem_nvr
+    global sem_dict
 
-    sem_google = await init_semaphore()
-    sem_ruz = await init_semaphore()
-    sem_nvr = await init_semaphore()
+    sem_google = asyncio.Semaphore(10)
+    sem_ruz = asyncio.Semaphore(10)
+    sem_nvr = asyncio.Semaphore(10)
+    sem_dict = {NVR: sem_nvr, GOOGLE: sem_google, RUZ: sem_ruz}
 
 
 asyncio.run(main())
