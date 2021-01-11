@@ -3,21 +3,27 @@ from loguru import logger
 import asyncio
 
 from ..settings import settings
+from ..utils import semlock
 
 
 NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
 NVR_API_KEY = settings.nvr_api_key
 
 
+@semlock("nvr")
 async def get_course_emails(course_code: str):
     """ Gets emails from a GET responce from Erudite """
 
     async with ClientSession() as session:
-        res = await session.get(f"{NVR_API_URL}/disciplines", params={"course_code": course_code})
+        res = await session.get(
+            f"{NVR_API_URL}/disciplines", params={"course_code": course_code}
+        )
         async with res:
             data = await res.json()
 
-    logger.info(f"nvr.get_course_emails returned {res.status}, with body {await res.text()}")
+    logger.info(
+        f"nvr.get_course_emails returned {res.status}, with body {await res.text()}"
+    )
 
     # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
     if type(data) == list:
@@ -31,6 +37,7 @@ async def get_course_emails(course_code: str):
     return grp_emails
 
 
+@semlock("nvr")
 async def add_lesson(lesson):
     """Posts a lesson to Erudite
 

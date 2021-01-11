@@ -8,6 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from ..redis_caching.caching import cache
+from ..utils import semlock
 
 
 class GCalendar:
@@ -40,6 +41,7 @@ class GCalendar:
 
         self.service = build("calendar", "v3", credentials=creds)
 
+    @semlock("google")
     async def create_event(
         self,
         calendar_id: str,
@@ -82,6 +84,7 @@ class GCalendar:
 
         return event_json
 
+    @semlock("google")
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
             await session.delete(
@@ -89,6 +92,7 @@ class GCalendar:
             )
 
     @cache
+    @semlock("google")
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from . import nvr_api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
+from ..utils import semlock
 
 
 class RuzApi:
@@ -12,6 +13,7 @@ class RuzApi:
 
     # building id МИЭМа = 92
     @cache
+    @semlock("ruz")
     async def get_auditoriumoid(self, building_id: int = 92):
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/auditoriums?buildingoid=0")
@@ -21,10 +23,12 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id
+            and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     @cache
+    @semlock("ruz")
     async def get_classes(self, ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
@@ -35,7 +39,9 @@ class RuzApi:
             "%Y.%m.%d"
         )  # Не забыть поставить 1 день !!!!!!!!!!!!!!!!!
 
-        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
+        params = dict(
+            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
+        )
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
