@@ -7,6 +7,8 @@ from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 from core.apis import nvr_api
+from core.redis_caching.caching import redis_connect
+import core.utils as test
 
 
 class CalendarManager:
@@ -26,9 +28,17 @@ class CalendarManager:
         room: Room,
         lesson,
     ):
+        print("\n")
+        for i in test.sem_dict:
+            print(f"{i} - {test.sem_dict[i]._value}")
+        print("\n")
         event = await self.calendar_api.create_event(room.calendar, lesson)
         lesson["gcalendar_event_id"] = event["id"]
         lesson["gcalendar_calendar_id"] = room.calendar
+        print("\n")
+        for i in test.sem_dict:
+            print(f"{i} - {test.sem_dict[i]._value}")
+        print("\n")
         await nvr_api.add_lesson(lesson)
         await self.create_record(room, event)
 
@@ -38,10 +48,11 @@ class CalendarManager:
     ):
         try:
             classes = await self.ruz_api.get_classes(room.ruz_id)
-        except Exception:
+        except Exception as err:
             classes = None
+            logger.error(err)
 
-        if classes:  # Убрать на проде!!!!!!!!!!!!!!1
+        if classes:  # Убрать на проде!!!!!!!!!!!!!!
 
             for i in range(0, len(classes), 10):
                 chunk = classes[i : i + 10]
@@ -61,6 +72,40 @@ class CalendarManager:
 
         logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
 
+    async def add_online_room(self, classes: list, i: int, ruz: RuzApi, jitsi):
+        chunk = classes[i : i + 10]
+        ruz_classes = [
+            lesson
+            for lesson in chunk
+            if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]
+        ]
+        jitsi_classes = [
+            class_
+            for class_ in chunk
+            if class_["ruz_url"] is not None and "meet.miem.hse.ru" in class_["ruz_url"]
+        ]
+
+        logger.info(f"Adding ruz classes: {ruz_classes}")
+        for lesson in ruz_classes:
+            event = await self.calendar_api.create_event(ruz.calendar, lesson)
+            try:  # Убрать на проде !!!!!!!!!!!!!!!!
+                lesson["gcalendar_event_id"] = event["id"]
+            except:
+                return False
+            lesson["gcalendar_calendar_id"] = ruz.calendar
+            await nvr_api.add_lesson(lesson)
+
+        logger.info(f"Adding jitsi classes: {jitsi_classes}")
+        for lesson in jitsi_classes:
+            if jitsi:  # Убрать на проде !!!!!!!!!!!!!!!
+                event = await self.calendar_api.create_event(jitsi.calendar, lesson)
+            try:  # Убрать на проде !!!!!!!!!!!!!!!!
+                lesson["gcalendar_event_id"] = event["id"]
+            except:
+                return False
+            lesson["gcalendar_calendar_id"] = jitsi.calendar
+            await nvr_api.add_lesson(lesson)
+
     async def fetch_online_room(
         self,
         room: Room,
@@ -75,43 +120,11 @@ class CalendarManager:
             return False
 
         if classes_len:  # Убрать на проде !!!!!!!!!!!!!!!!!!
-            for i in range(0, classes_len, 10):
-                chunk = classes[i : i + 10]
-                ruz_classes = [
-                    lesson
-                    for lesson in chunk
-                    if lesson["ruz_url"] is None
-                    or "meet.miem.hse.ru" not in lesson["ruz_url"]
-                ]
-                jitsi_classes = [
-                    class_
-                    for class_ in chunk
-                    if class_["ruz_url"] is not None
-                    and "meet.miem.hse.ru" in class_["ruz_url"]
-                ]
+            tasks = [
+                self.add_online_room(classes, i, ruz, jitsi) for i in range(0, classes_len, 10)
+            ]
 
-                logger.info(f"Adding ruz classes: {ruz_classes}")
-                for lesson in ruz_classes:
-                    event = await self.calendar_api.create_event(ruz.calendar, lesson)
-                    try:  # Убрать на проде !!!!!!!!!!!!!!!!
-                        lesson["gcalendar_event_id"] = event["id"]
-                    except:
-                        return False
-                    lesson["gcalendar_calendar_id"] = ruz.calendar
-                    await nvr_api.add_lesson(lesson)
-
-                logger.info(f"Adding jitsi classes: {jitsi_classes}")
-                for lesson in jitsi_classes:
-                    if jitsi:  # Убрать на проде !!!!!!!!!!!!!!!
-                        event = await self.calendar_api.create_event(
-                            jitsi.calendar, lesson
-                        )
-                    try:  # Убрать на проде !!!!!!!!!!!!!!!!
-                        lesson["gcalendar_event_id"] = event["id"]
-                    except:
-                        return False
-                    lesson["gcalendar_calendar_id"] = jitsi.calendar
-                    await nvr_api.add_lesson(lesson)
+            await asyncio.gather(*tasks)
 
     async def fetch_online_rooms(
         self,
@@ -125,9 +138,7 @@ class CalendarManager:
 
         await asyncio.gather(*tasks)
 
-        logger.info(
-            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
-        )
+        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
 
     async def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -136,9 +147,7 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = (
-            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
-        )
+        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
         if not creator:
             return
 
@@ -167,14 +176,13 @@ class CalendarManager:
 
 @logger.catch
 async def main():
+    await redis_connect()
     manager = CalendarManager()
 
-    # tasks = [
-    # manager.fetch_offline_rooms(),
-    # manager.fetch_online_rooms(),
-    # ]
-
-    tasks = [manager.fetch_offline_rooms()]
+    tasks = [
+        manager.fetch_offline_rooms(),
+        # manager.fetch_online_rooms(),
+    ]
 
     await asyncio.gather(*tasks)
 
@@ -184,3 +192,7 @@ if __name__ == "__main__":
     asyncio.run(main())
     end = time.time() - start
     logger.info(f"Time: {end}")
+    print("\n")
+    for i in test.sem_dict:
+        print(f"{i} - {test.sem_dict[i]._value}")
+    print("\n")

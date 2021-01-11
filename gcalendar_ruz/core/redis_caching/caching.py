@@ -15,14 +15,17 @@ PORT = settings.port
 async def redis_connect() -> StrictRedis:
     """ Connecting with redis """
 
+    global client
+
     try:
         client = StrictRedis(host=HOST, port=PORT)
         ping = await client.ping()
         if ping is True:
-            logger.info("Connection successful")
+            logger.info("Connection with redis successful")
             return client
     except Exception:
         logger.error("Connection with redis failed")
+        client = None
 
 
 async def get_routes_from_cache(key: str) -> str:
@@ -51,7 +54,7 @@ def cache(func):
             cache_key = f"{func.__name__}({args[1:]}, {kwargs})"
             data = await get_routes_from_cache(cache_key)
 
-            if data is not None:
+            if data:
                 logger.info("Getting data from cach")
                 data = json.loads(data)
                 return data
@@ -66,13 +69,3 @@ def cache(func):
         return None
 
     return wrapper
-
-
-async def main():
-    """ Creating redis client """
-
-    global client
-    client = await redis_connect()
-
-
-asyncio.run(main())
