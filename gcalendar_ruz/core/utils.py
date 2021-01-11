@@ -8,6 +8,12 @@ GOOGLE = "google"
 NVR = "nvr"
 RUZ = "ruz"
 
+sem_dict = {
+    NVR: asyncio.Semaphore(10),
+    GOOGLE: asyncio.Semaphore(10),
+    RUZ: asyncio.Semaphore(10),
+}
+
 
 def camel_to_snake(name):
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
@@ -29,18 +35,3 @@ def semlock(service: str):
         return wrapper
 
     return wrap
-
-
-async def main():
-    global sem_google
-    global sem_ruz
-    global sem_nvr
-    global sem_dict
-
-    sem_google = asyncio.Semaphore(10)
-    sem_ruz = asyncio.Semaphore(10)
-    sem_nvr = asyncio.Semaphore(10)
-    sem_dict = {NVR: sem_nvr, GOOGLE: sem_google, RUZ: sem_ruz}
-
-
-asyncio.run(main())

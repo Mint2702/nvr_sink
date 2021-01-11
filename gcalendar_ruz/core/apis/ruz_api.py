@@ -26,11 +26,6 @@ class RuzApi:
             if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
-    async def appending_classes(
-        self,
-    ):
-        pass
-
     @cache
     @semlock("ruz")
     async def get_classes(self, ruz_room_id: str, online: bool = False):
