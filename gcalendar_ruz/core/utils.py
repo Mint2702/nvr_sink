@@ -9,9 +9,9 @@ NVR = "nvr"
 RUZ = "ruz"
 
 sem_dict = {
-    NVR: asyncio.Semaphore(3),
-    GOOGLE: asyncio.Semaphore(1),
-    RUZ: asyncio.Semaphore(3),
+    NVR: asyncio.Semaphore(10),
+    GOOGLE: asyncio.Semaphore(10),
+    RUZ: asyncio.Semaphore(10),
 }
 
 
@@ -24,7 +24,6 @@ def semlock(func):
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
         service = self.SERVICE
-        print(service)
         sem = sem_dict.get(service)
         if not sem:
             logger.error("Unsupported service")

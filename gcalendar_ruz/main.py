@@ -29,17 +29,9 @@ class CalendarManager:
         room: Room,
         lesson,
     ):
-        print("\n")
-        for i in test.sem_dict:
-            print(f"{i} - {test.sem_dict[i]._value}")
-        print("\n")
         event = await self.calendar_api.create_event(room.calendar, lesson)
         lesson["gcalendar_event_id"] = event["id"]
         lesson["gcalendar_calendar_id"] = room.calendar
-        print("\n")
-        for i in test.sem_dict:
-            print(f"{i} - {test.sem_dict[i]._value}")
-        print("\n")
         await self.nvr_api.add_lesson(lesson)
         await self.create_record(room, event)
 
@@ -182,7 +174,7 @@ async def main():
 
     tasks = [
         manager.fetch_offline_rooms(),
-        # manager.fetch_online_rooms(),
+        manager.fetch_online_rooms(),
     ]
 
     await asyncio.gather(*tasks)
@@ -190,10 +182,10 @@ async def main():
 
 if __name__ == "__main__":
     start = time.time()
-    asyncio.run(main())
+
+    loop = asyncio.get_event_loop()
+    future = asyncio.ensure_future(main())
+    loop.run_until_complete(future)
+
     end = time.time() - start
     logger.info(f"Time: {end}")
-    print("\n")
-    for i in test.sem_dict:
-        print(f"{i} - {test.sem_dict[i]._value}")
-    print("\n")
