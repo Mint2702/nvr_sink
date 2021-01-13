@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 from .nvr_api import Nvr_Api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
-from ..utils import semlock
+from ..utils import semlock, RUZ
 
 
 class RuzApi:
-    SERVICE = "ruz"
+    SERVICE = RUZ
 
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
         self.url = url

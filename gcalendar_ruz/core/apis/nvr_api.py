@@ -3,13 +3,13 @@ from loguru import logger
 import asyncio
 
 from ..settings import settings
-from ..utils import semlock
+from ..utils import semlock, NVR
 
 
 class Nvr_Api:
     NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
-    SERVICE = "nvr"
+    SERVICE = NVR
 
     @semlock
     async def get_course_emails(self, course_code: str):

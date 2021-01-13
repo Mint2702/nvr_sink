@@ -8,11 +8,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from ..redis_caching.caching import cache
-from ..utils import semlock
+from ..utils import semlock, GOOGLE
 
 
 class GCalendar:
-    SERVICE = "google"
+    SERVICE = GOOGLE
 
     def __init__(
         self,
