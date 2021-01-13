@@ -184,8 +184,7 @@ if __name__ == "__main__":
     start = time.time()
 
     loop = asyncio.get_event_loop()
-    future = asyncio.ensure_future(main())
-    loop.run_until_complete(future)
+    loop.run_until_complete(main())
 
     end = time.time() - start
     logger.info(f"Time: {end}")
