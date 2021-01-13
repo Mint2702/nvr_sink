@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from ..redis_caching.caching import cache
-from ..utils import semlock, GOOGLE
+from ..utils import semlock, GOOGLE, token_check
 
 
 class GCalendar:
@@ -23,26 +23,27 @@ class GCalendar:
         """
         Setting up calendar
         """
-        creds = None
+        self.creds = None
         if os.path.exists(token_path):
             with open(token_path, "rb") as token:
-                creds = pickle.load(token)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+                self.creds = pickle.load(token)
+        if not self.creds or not self.creds.valid:
+            if self.creds and self.creds.expired and self.creds.refresh_token:
+                self.creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(creds_path, scopes)
-                creds = flow.run_local_server(port=0)
+                self.creds = flow.run_local_server(port=0)
             with open(token_path, "wb") as token:
-                pickle.dump(creds, token)
+                pickle.dump(self.creds, token)
 
         self.HEADERS = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {creds.token}",
+            "Authorization": f"Bearer {self.creds.token}",
         }
 
-        self.service = build("calendar", "v3", credentials=creds)
+        self.service = build("calendar", "v3", credentials=self.creds)
 
+    @token_check
     @semlock
     async def create_event(
         self,
@@ -86,6 +87,7 @@ class GCalendar:
 
         return event_json
 
+    @token_check
     @semlock
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
@@ -94,6 +96,7 @@ class GCalendar:
             )
 
     @cache
+    @token_check
     @semlock
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()

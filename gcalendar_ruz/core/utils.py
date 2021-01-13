@@ -28,9 +28,20 @@ def semlock(func):
         if not sem:
             logger.error("Unsupported service")
 
-        print(f"{service} - {sem._value} ")
         async with sem:
             logger.debug(f"{service} semaphore for function {func.__name__}")
             return await func(self, *args, **kwargs)
+
+    return wrapper
+
+
+def token_check(func):
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        if not self.creds or self.creds.expired:
+            logger.info("Refresh google tokens")
+            self.refresh_token()
+
+        return await func(self, *args, **kwargs)
 
     return wrapper
