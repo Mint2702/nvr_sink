@@ -6,7 +6,7 @@ import time
 from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
-from core.apis import nvr_api
+from core.apis.nvr_api import Nvr_Api
 from core.redis_caching.caching import redis_connect
 import core.utils as test
 
@@ -15,6 +15,7 @@ class CalendarManager:
     def __init__(self):
         self.session = Session()
         self.ruz_api = RuzApi()
+        self.nvr_api = Nvr_Api()
         self.calendar_api = GCalendar(
             "core/creds/credentials.json",
             "core/creds/tokenCalendar.pickle",
@@ -39,7 +40,7 @@ class CalendarManager:
         for i in test.sem_dict:
             print(f"{i} - {test.sem_dict[i]._value}")
         print("\n")
-        await nvr_api.add_lesson(lesson)
+        await self.nvr_api.add_lesson(lesson)
         await self.create_record(room, event)
 
     async def fetch_offline_room(
@@ -93,7 +94,7 @@ class CalendarManager:
             except:
                 return False
             lesson["gcalendar_calendar_id"] = ruz.calendar
-            await nvr_api.add_lesson(lesson)
+            await self.nvr_api.add_lesson(lesson)
 
         logger.info(f"Adding jitsi classes: {jitsi_classes}")
         for lesson in jitsi_classes:
@@ -104,7 +105,7 @@ class CalendarManager:
             except:
                 return False
             lesson["gcalendar_calendar_id"] = jitsi.calendar
-            await nvr_api.add_lesson(lesson)
+            await self.nvr_api.add_lesson(lesson)
 
     async def fetch_online_room(
         self,

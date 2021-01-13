@@ -9,9 +9,9 @@ NVR = "nvr"
 RUZ = "ruz"
 
 sem_dict = {
-    NVR: asyncio.Semaphore(15),
-    GOOGLE: asyncio.Semaphore(20),
-    RUZ: asyncio.Semaphore(15),
+    NVR: asyncio.Semaphore(3),
+    GOOGLE: asyncio.Semaphore(1),
+    RUZ: asyncio.Semaphore(3),
 }
 
 
@@ -20,19 +20,18 @@ def camel_to_snake(name):
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
-def semlock(service: str):
-    def wrap(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            sem = sem_dict.get(service)
-            if not sem:
-                logger.error("Unsupported service")
+def semlock(func):
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        service = self.SERVICE
+        print(service)
+        sem = sem_dict.get(service)
+        if not sem:
+            logger.error("Unsupported service")
 
-            print(f"{service} - {sem._value} ")
-            async with sem:
-                logger.debug(f"{service} semaphore for function {func.__name__}")
-                return await func(*args, **kwargs)
+        print(f"{service} - {sem._value} ")
+        async with sem:
+            logger.debug(f"{service} semaphore for function {func.__name__}")
+            return await func(self, *args, **kwargs)
 
-        return wrapper
-
-    return wrap
+    return wrapper

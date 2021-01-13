@@ -12,6 +12,8 @@ from ..utils import semlock
 
 
 class GCalendar:
+    SERVICE = "google"
+
     def __init__(
         self,
         creds_path: str,
@@ -41,7 +43,7 @@ class GCalendar:
 
         self.service = build("calendar", "v3", credentials=creds)
 
-    @semlock("google")
+    @semlock
     async def create_event(
         self,
         calendar_id: str,
@@ -84,7 +86,7 @@ class GCalendar:
 
         return event_json
 
-    @semlock("google")
+    @semlock
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
             await session.delete(
@@ -92,7 +94,7 @@ class GCalendar:
             )
 
     @cache
-    @semlock("google")
+    @semlock
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
