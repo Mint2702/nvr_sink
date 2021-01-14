@@ -8,8 +8,7 @@ from loguru import logger
 from ..settings import settings
 
 
-HOST = settings.host
-PORT = settings.port
+URL = settings.url_redis
 
 
 async def redis_connect() -> StrictRedis:
@@ -18,7 +17,7 @@ async def redis_connect() -> StrictRedis:
     global client
 
     try:
-        client = StrictRedis.from_url(settings.url_redis)
+        client = StrictRedis.from_url(URL)
         ping = await client.ping()
         if ping is True:
             logger.info("Connection with redis successful")

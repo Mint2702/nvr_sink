@@ -174,7 +174,7 @@ async def main():
 
     tasks = [
         manager.fetch_offline_rooms(),
-        # manager.fetch_online_rooms(),
+        manager.fetch_online_rooms(),
     ]
 
     await asyncio.gather(*tasks)
