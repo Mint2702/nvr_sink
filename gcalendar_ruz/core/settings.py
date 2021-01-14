@@ -2,10 +2,9 @@ from pydantic import BaseSettings, Field
 
 
 class Settings(BaseSettings):
-    host: str = Field(..., env="HOST_REDIS")
-    port: str = Field(..., env="PORT_REDIS")
     nvr_api_key: str = Field(..., env="NVR_API_KEY")
     db_url: str = Field(..., env="DB_URL")
+    url_redis: str = Field(..., env="URL_REDIS")
 
     class Config:
         env_file = ".env"

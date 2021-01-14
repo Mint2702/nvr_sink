@@ -18,7 +18,7 @@ async def redis_connect() -> StrictRedis:
     global client
 
     try:
-        client = StrictRedis(host=HOST, port=PORT)
+        client = StrictRedis.from_url(settings.url_redis)
         ping = await client.ping()
         if ping is True:
             logger.info("Connection with redis successful")
