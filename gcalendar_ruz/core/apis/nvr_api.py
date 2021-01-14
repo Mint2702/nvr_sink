@@ -1,41 +1,47 @@
 from aiohttp import ClientSession
-import asyncio
 from loguru import logger
+import asyncio
 
 from ..settings import settings
+from ..utils import semlock, NVR
 
 
-NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
-NVR_API_KEY = settings.nvr_api_key
+class Nvr_Api:
+    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
+    NVR_API_KEY = settings.nvr_api_key
+    SERVICE = NVR
 
+    @semlock
+    async def get_course_emails(self, course_code: str):
+        """ Gets emails from a GET responce from Erudite """
 
-async def get_course_emails(course_code: str):
-    """ Gets emails from a GET responce from Erudite """
+        async with ClientSession() as session:
+            res = await session.get(
+                f"{self.NVR_API_URL}/disciplines", params={"course_code": course_code}
+            )
+            async with res:
+                data = await res.json()
 
-    async with ClientSession() as session:
-        res = await session.get(f"{NVR_API_URL}/disciplines", params={"course_code": course_code})
-        async with res:
-            data = await res.json()
+        logger.info(f"nvr.get_course_emails returned {res.status}, with body {await res.text()}")
 
-    logger.info(f"nvr.get_course_emails returned {res.status}, with body {await res.text()}")
+        # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
+        if type(data) == list:
+            grp_emails = data[0].get("emails")
+        else:
+            return None
 
-    # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
-    if type(data) == list:
-        grp_emails = data[0].get("emails")
-    else:
-        return None
+        if grp_emails == [""]:
+            return None
 
-    if grp_emails == [""]:
-        return None
+        return grp_emails
 
-    return grp_emails
+    @semlock
+    async def add_lesson(self, lesson):
+        """Posts a lesson to Erudite
 
-
-async def add_lesson(lesson):
-    """ Posts a lesson to Erudite """
-
-    async with ClientSession() as session:
-        res = await session.post(
-            f"{NVR_API_URL}/lessons", json=lesson, headers={"key": NVR_API_KEY}
-        )
-    logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
+        async with ClientSession() as session:
+            res = await session.post(
+                f"{self.NVR_API_URL}/lessons", json=lesson, headers={"key": self.NVR_API_KEY}
+            )
+        logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")"""
+        return await asyncio.sleep(0.2)  # Убрать на проде!!!!!!!!!

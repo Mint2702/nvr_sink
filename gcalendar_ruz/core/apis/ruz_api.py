@@ -1,17 +1,22 @@
 from aiohttp import ClientSession
 from datetime import datetime, timedelta
 
-from . import nvr_api
+from .nvr_api import Nvr_Api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
+from ..utils import semlock, RUZ
 
 
 class RuzApi:
+    SERVICE = RUZ
+
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
         self.url = url
+        self.nvr_api = Nvr_Api()
 
     # building id МИЭМа = 92
     @cache
+    @semlock
     async def get_auditoriumoid(self, building_id: int = 92):
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/auditoriums?buildingoid=0")
@@ -21,22 +26,22 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id
-            and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     @cache
+    @semlock
     async def get_classes(self, ruz_room_id: str, online: bool = False):
         """
         Get classes in room for 1 week
         Function that requests information about classes for 1 day from today and returns list of dicts
         """
 
-        needed_date = (datetime.today() + timedelta(days=10)).strftime("%Y.%m.%d")
+        needed_date = (datetime.today() + timedelta(days=9)).strftime(
+            "%Y.%m.%d"
+        )  # Не забыть поставить 1 день !!!!!!!!!!!!!!!!!
 
-        params = dict(
-            fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
@@ -65,7 +70,7 @@ class RuzApi:
 
             if lesson["ruz_group"] is not None:
                 stream = lesson["ruz_group"].split("#")[0]
-                grp_emails = await nvr_api.get_course_emails(stream)
+                grp_emails = await self.nvr_api.get_course_emails(stream)
                 if grp_emails is not None:
                     lesson["grp_emails"] = grp_emails
             else:
