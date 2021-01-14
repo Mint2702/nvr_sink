@@ -61,11 +61,13 @@ def cache(func):
 
         logger.info("Getting data from remote source")
         data = await func(*args, **kwargs)
-        if data:
-            if client:
-                state = await set_routes_to_cache(key=cache_key, value=json.dumps(data))
-            return data
 
-        return None
+        if data is None:
+            return None
+
+        if client:
+            state = await set_routes_to_cache(key=cache_key, value=json.dumps(data))
+
+        return data
 
     return wrapper
