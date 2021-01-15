@@ -37,9 +37,7 @@ class RuzApi:
         Function that requests information about classes for 1 day from today and returns list of dicts
         """
 
-        needed_date = (datetime.today() + timedelta(days=9)).strftime(
-            "%Y.%m.%d"
-        )  # Не забыть поставить 1 день !!!!!!!!!!!!!!!!!
+        needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
 
         params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
 

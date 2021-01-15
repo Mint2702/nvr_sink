@@ -45,7 +45,7 @@ class CalendarManager:
             classes = None
             logger.error(err)
 
-        if classes:  # Убрать на проде!!!!!!!!!!!!!!
+        if classes:
 
             for i in range(0, len(classes), 10):
                 chunk = classes[i : i + 10]
@@ -81,21 +81,14 @@ class CalendarManager:
         logger.info(f"Adding ruz classes: {ruz_classes}")
         for lesson in ruz_classes:
             event = await self.calendar_api.create_event(ruz.calendar, lesson)
-            try:  # Убрать на проде !!!!!!!!!!!!!!!!
-                lesson["gcalendar_event_id"] = event["id"]
-            except:
-                return False
+            lesson["gcalendar_event_id"] = event["id"]
             lesson["gcalendar_calendar_id"] = ruz.calendar
             await self.nvr_api.add_lesson(lesson)
 
         logger.info(f"Adding jitsi classes: {jitsi_classes}")
         for lesson in jitsi_classes:
-            if jitsi:  # Убрать на проде !!!!!!!!!!!!!!!
-                event = await self.calendar_api.create_event(jitsi.calendar, lesson)
-            try:  # Убрать на проде !!!!!!!!!!!!!!!!
-                lesson["gcalendar_event_id"] = event["id"]
-            except:
-                return False
+            event = await self.calendar_api.create_event(jitsi.calendar, lesson)
+            lesson["gcalendar_event_id"] = event["id"]
             lesson["gcalendar_calendar_id"] = jitsi.calendar
             await self.nvr_api.add_lesson(lesson)
 
@@ -112,12 +105,9 @@ class CalendarManager:
             logger.error(err)
             return False
 
-        if classes_len:  # Убрать на проде !!!!!!!!!!!!!!!!!!
-            tasks = [
-                self.add_online_room(classes, i, ruz, jitsi) for i in range(0, classes_len, 10)
-            ]
+        tasks = [self.add_online_room(classes, i, ruz, jitsi) for i in range(0, classes_len, 10)]
 
-            await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     async def fetch_online_rooms(
         self,
@@ -181,10 +171,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    start = time.time()
-
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-
-    end = time.time() - start
-    logger.info(f"Time: {end}")

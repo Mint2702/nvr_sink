@@ -37,11 +37,10 @@ class Nvr_Api:
 
     @semlock
     async def add_lesson(self, lesson):
-        """Posts a lesson to Erudite
+        """ Posts a lesson to Erudite """
 
         async with ClientSession() as session:
             res = await session.post(
                 f"{self.NVR_API_URL}/lessons", json=lesson, headers={"key": self.NVR_API_KEY}
             )
-        logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")"""
-        return await asyncio.sleep(0.2)  # Убрать на проде!!!!!!!!!
+        logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
