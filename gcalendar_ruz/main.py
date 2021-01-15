@@ -16,10 +16,7 @@ class CalendarManager:
         self.session = Session()
         self.ruz_api = RuzApi()
         self.nvr_api = Nvr_Api()
-        self.calendar_api = GCalendar(
-            "core/creds/credentials.json",
-            "core/creds/tokenCalendar.pickle",
-        )
+        self.calendar_api = GCalendar()
 
     def __del__(self):
         self.session.close()
@@ -164,7 +161,7 @@ async def main():
 
     tasks = [
         manager.fetch_offline_rooms(),
-        manager.fetch_online_rooms(),
+        # manager.fetch_online_rooms(),
     ]
 
     await asyncio.gather(*tasks)

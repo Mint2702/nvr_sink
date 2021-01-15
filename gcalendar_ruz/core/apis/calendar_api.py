@@ -11,13 +11,17 @@ from ..redis_caching.caching import cache
 from ..utils import semlock, GOOGLE, token_check
 
 
+CREDS_PATH = "core/creds/credentials.json"
+TOKEN_PATH = "core/creds/tokenCalendar.pickle"
+
+
 class GCalendar:
     SERVICE = GOOGLE
 
     def __init__(
         self,
-        creds_path: str,
-        token_path: str,
+        creds_path: str = CREDS_PATH,
+        token_path: str = TOKEN_PATH,
         scopes: str or list = "https://www.googleapis.com/auth/calendar",
     ):
         """
