@@ -23,6 +23,22 @@ class GCalendar:
         """
         Setting up calendar
         """
+
+        self.refresh_token(creds_path, token_path, scopes)
+
+        self.HEADERS = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.creds.token}",
+        }
+
+        self.service = build("calendar", "v3", credentials=self.creds)
+
+    def refresh_token(
+        self,
+        creds_path: str,
+        token_path: str,
+        scopes: str or list = "https://www.googleapis.com/auth/calendar",
+    ):
         self.creds = None
         if os.path.exists(token_path):
             with open(token_path, "rb") as token:
@@ -35,13 +51,6 @@ class GCalendar:
                 self.creds = flow.run_local_server(port=0)
             with open(token_path, "wb") as token:
                 pickle.dump(self.creds, token)
-
-        self.HEADERS = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.creds.token}",
-        }
-
-        self.service = build("calendar", "v3", credentials=self.creds)
 
     @token_check
     @semlock
