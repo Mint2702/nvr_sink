@@ -160,11 +160,13 @@ async def main():
     manager = CalendarManager()
 
     tasks = [
-        manager.fetch_offline_rooms(),
+        # manager.fetch_offline_rooms(),
         # manager.fetch_online_rooms(),
     ]
 
-    await asyncio.gather(*tasks)
+    # await asyncio.gather(*tasks)
+    nvr = Nvr_Api()
+    await nvr.delete_lesson("5fcff2caea112d40c15c973b")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ from ..utils import semlock, NVR
 
 
 class Nvr_Api:
-    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
+    NVR_API_URL = "http://localhost:8000"  # "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
     SERVICE = NVR
 
@@ -36,11 +36,29 @@ class Nvr_Api:
         return grp_emails
 
     @semlock
-    async def add_lesson(self, lesson):
-        """ Posts a lesson to Erudite """
+    async def add_lesson(self, lesson: dict):
+        """Posts a lesson to Erudite
 
         async with ClientSession() as session:
             res = await session.post(
                 f"{self.NVR_API_URL}/lessons", json=lesson, headers={"key": self.NVR_API_KEY}
             )
         logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
+        """
+        pass
+
+    @semlock
+    async def delete_lesson(self, lesson_id: str):
+        """ Deletes a lesson from Erudite """
+
+        async with ClientSession() as session:
+            res = await session.delete(
+                f"{self.NVR_API_URL}/lessons/{lesson_id}",
+                headers={"key": self.NVR_API_KEY},
+            )
+        if res.status == 200:
+            logger.info(f"Lesson with id: {lesson_id} deleted")
+        elif res.status == 404:
+            logger.info(f"Lesson with id: {lesson_id} is not found in Erudite")
+        else:
+            logger.error(f"Erudite is not working properly...")
