@@ -33,13 +33,13 @@ class RuzApi:
     @semlock
     async def get_classes(self, ruz_room_id: str, online: bool = False):
         """
-        Get classes in room for 1 week
-        Function that requests information about classes for 1 day from today and returns list of dicts
+        Get classes in room for 60 days
         """
 
-        needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
+        needed_date = (datetime.today() + timedelta(days=60)).strftime("%Y.%m.%d")
+        today = datetime.today().strftime("%Y.%m.%d")
 
-        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
+        params = dict(fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id))
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)

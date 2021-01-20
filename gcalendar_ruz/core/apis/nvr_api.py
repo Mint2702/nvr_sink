@@ -22,7 +22,7 @@ class Nvr_Api:
             async with res:
                 data = await res.json()
 
-        logger.info(f"nvr.get_course_emails returned {res.status}, with body {await res.text()}")
+        logger.info(f"nvr.get_course_emails returned {res.status}")
 
         # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
         if type(data) == list:
@@ -37,15 +37,13 @@ class Nvr_Api:
 
     @semlock
     async def add_lesson(self, lesson: dict):
-        """Posts a lesson to Erudite
+        """ Posts a lesson to Erudite """
 
         async with ClientSession() as session:
             res = await session.post(
                 f"{self.NVR_API_URL}/lessons", json=lesson, headers={"key": self.NVR_API_KEY}
             )
-        logger.info(f"nvr.add_lesson returned {res.status}, with body {await res.text()}")
-        """
-        pass
+        logger.info(f"nvr.add_lesson returned {res.status}")
 
     @semlock
     async def delete_lesson(self, lesson_id: str):
@@ -62,3 +60,53 @@ class Nvr_Api:
             logger.info(f"Lesson with id: {lesson_id} is not found in Erudite")
         else:
             logger.error(f"Erudite is not working properly...")
+
+    @semlock
+    async def update_lesson(self, lesson_id: str, lesson_data: dict):
+        """ Updates a lesson in Erudite """
+
+        async with ClientSession() as session:
+            res = await session.put(
+                f"{self.NVR_API_URL}/lessons/{lesson_id}",
+                json=lesson_data,
+                headers={"key": self.NVR_API_KEY},
+            )
+
+        if res.status == 200:
+            logger.info(f"Lesson with id: {lesson_id} updated")
+        else:
+            logger.error(f"Erudite is not working properly...")
+
+    @semlock
+    async def check_and_update_lessons(self, lesson: dict) -> bool:
+        """ Compares two lessons """
+
+        async with ClientSession() as session:
+            res = await session.get(
+                f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_oid": lesson["ruz_lesson_oid"]}
+            )
+            async with res:
+                data = await res.json()
+
+        if type(data) != list:
+            # This means that there is no such lesson found in Erudite, so it needs to be added
+            return False
+
+        # The is statement deletes all but one lessons with the same ruz_lesson_oid if there are more than 1 of them
+        if len(data) > 1:
+            data_del = data[1:]
+            for i in data_del:
+                await self.delete_lesson(i["id"])
+
+        data = data[0]
+
+        lesson_id = data.pop("id")
+        data.pop("gcalendar_event_id")
+        data.pop("gcalendar_calendar_id")
+        if data == lesson:
+            return True
+
+        # If code run up to this point, it means that lesson with such ruz_lesson_oid is found in Erudite, but it differs from the one in RUZ, so it needs to be updated
+        await self.update_lesson(lesson_id, lesson)
+
+        return True

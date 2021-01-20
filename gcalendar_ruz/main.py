@@ -24,13 +24,14 @@ class CalendarManager:
     async def add_offline_classes(
         self,
         room: Room,
-        lesson,
+        lesson: dict,
     ):
-        event = await self.calendar_api.create_event(room.calendar, lesson)
-        lesson["gcalendar_event_id"] = event["id"]
-        lesson["gcalendar_calendar_id"] = room.calendar
-        await self.nvr_api.add_lesson(lesson)
-        await self.create_record(room, event)
+        if not await self.nvr_api.check_lessons(lesson):
+            event = await self.calendar_api.create_event(room.calendar, lesson)
+            lesson["gcalendar_event_id"] = event["id"]
+            lesson["gcalendar_calendar_id"] = room.calendar
+            await self.nvr_api.add_lesson(lesson)
+            await self.create_record(room, event)
 
     async def fetch_offline_room(
         self,
@@ -44,12 +45,12 @@ class CalendarManager:
 
         if classes:
 
-            for i in range(0, len(classes), 10):
-                chunk = classes[i : i + 10]
-                logger.info(f"Adding classes: {chunk}")
+            logger.info("Adding classes to calendar and Erudite")
+            for i in range(0, len(classes), 5):
+                chunk = classes[i : i + 5]
                 tasks = [self.add_offline_classes(room, lesson) for lesson in chunk]
 
-            await asyncio.gather(*tasks)
+                await asyncio.gather(*tasks)
 
     async def fetch_offline_rooms(
         self,
@@ -60,7 +61,9 @@ class CalendarManager:
 
         await asyncio.gather(*tasks)
 
-        logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
+        logger.info(
+            f"Created events for {datetime.today().date() + timedelta(days=1)} - {datetime.today().date() + timedelta(days=60)}"
+        )
 
     async def add_online_room(self, classes: list, i: int, ruz: RuzApi, jitsi):
         chunk = classes[i : i + 10]
@@ -75,14 +78,14 @@ class CalendarManager:
             if class_["ruz_url"] is not None and "meet.miem.hse.ru" in class_["ruz_url"]
         ]
 
-        logger.info(f"Adding ruz classes: {ruz_classes}")
+        logger.info("Adding ruz classes: ")
         for lesson in ruz_classes:
             event = await self.calendar_api.create_event(ruz.calendar, lesson)
             lesson["gcalendar_event_id"] = event["id"]
             lesson["gcalendar_calendar_id"] = ruz.calendar
             await self.nvr_api.add_lesson(lesson)
 
-        logger.info(f"Adding jitsi classes: {jitsi_classes}")
+        logger.info("Adding jitsi classes: ")
         for lesson in jitsi_classes:
             event = await self.calendar_api.create_event(jitsi.calendar, lesson)
             lesson["gcalendar_event_id"] = event["id"]
@@ -160,13 +163,11 @@ async def main():
     manager = CalendarManager()
 
     tasks = [
-        # manager.fetch_offline_rooms(),
+        manager.fetch_offline_rooms(),
         # manager.fetch_online_rooms(),
     ]
 
-    # await asyncio.gather(*tasks)
-    nvr = Nvr_Api()
-    await nvr.delete_lesson("5fcff2caea112d40c15c973b")
+    await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
