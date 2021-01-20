@@ -1,6 +1,5 @@
 from aiohttp import ClientSession
 from loguru import logger
-import asyncio
 
 from ..settings import settings
 from ..utils import semlock, NVR
@@ -41,7 +40,9 @@ class Nvr_Api:
 
         async with ClientSession() as session:
             res = await session.post(
-                f"{self.NVR_API_URL}/lessons", json=lesson, headers={"key": self.NVR_API_KEY}
+                f"{self.NVR_API_URL}/lessons",
+                json=lesson,
+                headers={"key": self.NVR_API_KEY},
             )
         logger.info(f"nvr.add_lesson returned {res.status}")
 
@@ -59,7 +60,7 @@ class Nvr_Api:
         elif res.status == 404:
             logger.info(f"Lesson with id: {lesson_id} is not found in Erudite")
         else:
-            logger.error(f"Erudite is not working properly...")
+            logger.error("Erudite is not working properly...")
 
     @semlock
     async def update_lesson(self, lesson_id: str, lesson_data: dict):
@@ -75,7 +76,7 @@ class Nvr_Api:
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} updated")
         else:
-            logger.error(f"Erudite is not working properly...")
+            logger.error("Erudite is not working properly...")
 
     @semlock
     async def check_and_update_lessons(self, lesson: dict) -> bool:
@@ -83,7 +84,8 @@ class Nvr_Api:
 
         async with ClientSession() as session:
             res = await session.get(
-                f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_oid": lesson["ruz_lesson_oid"]}
+                f"{self.NVR_API_URL}/lessons",
+                params={"ruz_lesson_oid": lesson["ruz_lesson_oid"]},
             )
             async with res:
                 data = await res.json()

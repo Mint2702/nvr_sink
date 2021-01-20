@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
 import asyncio
 from loguru import logger
-import time
 
 from core.apis.ruz_api import RuzApi
 from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 from core.apis.nvr_api import Nvr_Api
 from core.redis_caching.caching import redis_connect
-import core.utils as test
 
 
 class CalendarManager:
@@ -105,7 +103,10 @@ class CalendarManager:
             logger.error(err)
             return False
 
-        tasks = [self.add_online_room(classes, i, ruz, jitsi) for i in range(0, classes_len, 10)]
+        tasks = [
+            self.add_online_room(classes, i, ruz, jitsi)
+            for i in range(0, classes_len, 10)
+        ]
 
         await asyncio.gather(*tasks)
 
@@ -121,7 +122,9 @@ class CalendarManager:
 
         await asyncio.gather(*tasks)
 
-        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
+        logger.info(
+            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
+        )
 
     async def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -130,7 +133,9 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        creator = (
+            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        )
         if not creator:
             return
 
