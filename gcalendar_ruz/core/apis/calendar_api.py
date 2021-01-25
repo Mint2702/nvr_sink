@@ -2,6 +2,7 @@ import os.path
 import pickle
 from datetime import datetime, timedelta
 from aiohttp import ClientSession
+from loguru import logger
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -96,26 +97,30 @@ class GCalendar:
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
             await session.delete(
-                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                headers=self.HEADERS,
             )
 
-    @cache
     @token_check
     @semlock
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
         nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
+        params = {
+            "timeMin": nowISO,
+            "timeMax": nowffISO,
+            "singleEvents": "True",
+            "orderBy": "startTime",
+        }
         async with ClientSession() as session:
             events_result = await session.get(
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
-                timeMin=nowISO,
-                timeMax=nowffISO,
-                singleEvents=True,
-                orderBy="startTime",
+                params=params,
+                headers=self.HEADERS,
             )
             async with events_result:
-                events_result = events_result.json()
+                events_result = await events_result.json()
 
         events = events_result.get("items", [])
         return events

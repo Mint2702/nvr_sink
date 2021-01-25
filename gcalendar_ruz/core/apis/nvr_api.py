@@ -1,5 +1,7 @@
 from aiohttp import ClientSession
 from loguru import logger
+import requests
+import json
 
 from ..settings import settings
 from ..utils import semlock, NVR
@@ -16,7 +18,9 @@ class Nvr_Api:
 
         async with ClientSession() as session:
             res = await session.get(
-                f"{self.NVR_API_URL}/disciplines", params={"course_code": course_code}
+                f"{self.NVR_API_URL}/disciplines",
+                params={"course_code": course_code},
+                headers={"key": self.NVR_API_KEY},
             )
             async with res:
                 data = await res.json()
@@ -79,36 +83,85 @@ class Nvr_Api:
             logger.error("Erudite is not working properly...")
 
     @semlock
-    async def check_and_update_lessons(self, lesson: dict) -> bool:
-        """ Compares two lessons """
+    async def get_lesson(self, ruz_lesson_oid: int) -> list:
+        """ Gets lesson from Erudite by it's ruz_lesson_oid """
 
         async with ClientSession() as session:
             res = await session.get(
                 f"{self.NVR_API_URL}/lessons",
-                params={"ruz_lesson_oid": lesson["ruz_lesson_oid"]},
+                params={"ruz_lesson_oid": ruz_lesson_oid},
             )
             async with res:
                 data = await res.json()
 
         if type(data) != list:
-            # This means that there is no such lesson found in Erudite, so it needs to be added
+            # This means that there is no such lesson found in Erudite
             return False
 
-        # The is statement deletes all but one lessons with the same ruz_lesson_oid if there are more than 1 of them
+        return data
+
+    def get_lessons(self) -> list:
+        """ Gets all lessons from Erudite """
+
+        lessons = requests.get(f"{self.NVR_API_URL}/lessons").json()
+
+        return lessons
+
+    @semlock
+    async def delete_copies(self, data: list) -> dict:
+        """ Checks if a list of lessons is longer than 1 and if it is, deletes all but one lessons from the list """
+
         if len(data) > 1:
             data_del = data[1:]
             for i in data_del:
                 await self.delete_lesson(i["id"])
 
-        data = data[0]
+        return data[0]
+
+    @semlock
+    async def check_lesson(self, lesson: dict) -> list:
+        """ Compares two lessons """
+
+        data = await self.get_lesson(lesson["ruz_lesson_oid"])
+
+        # No lesson found in Erudite, so it needs to be added
+        if data is False:
+            return ["Not found"]
+
+        data = await self.delete_copies(data)
 
         lesson_id = data.pop("id")
-        data.pop("gcalendar_event_id")
+        event_id = data.pop("gcalendar_event_id")
         data.pop("gcalendar_calendar_id")
         if data == lesson:
-            return True
+            return ["Same"]
 
         # If code run up to this point, it means that lesson with such ruz_lesson_oid is found in Erudite, but it differs from the one in RUZ, so it needs to be updated
-        await self.update_lesson(lesson_id, lesson)
+        return ["Update", lesson_id, event_id]
 
-        return True
+    def check_all_lessons(self, lessons_ruz: list) -> bool:
+        """ Compares two lists of lessons of RUZ and Erudite, and decides if they are the same or not """
+
+        lessons_erudite = self.get_lessons()
+        for lesson in lessons_erudite:
+            lesson.pop("id")
+            lesson.pop("gcalendar_event_id")
+            lesson.pop("gcalendar_calendar_id")
+
+        if len(lessons_ruz) == len(lessons_erudite):
+            flag = True
+            for lesson_erudite in lessons_erudite:
+                if flag:
+                    for lesson_ruz in lessons_ruz:
+                        if lesson_ruz == lesson_erudite:
+                            flag = True
+                            break
+                        else:
+                            flag = False
+        else:
+            logger.error(len(lessons_erudite))
+            return False
+        if flag:
+            return True
+
+        return False
