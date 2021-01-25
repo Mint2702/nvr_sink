@@ -56,8 +56,8 @@ class GCalendar:
             "description": lesson["description"],
         }
 
-        if lesson.get("ruz_lecturer_email"):
-            event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
+        if lesson.get("miem_lecturer_email"):
+            event["attendees"] = [{"email": lesson["miem_lecturer_email"]}]
             if lesson.get("grp_emails"):
                 event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 

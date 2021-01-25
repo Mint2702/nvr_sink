@@ -43,41 +43,18 @@ class CalendarManager:
 
     def __del__(self):
         self.session.close()
-
-    def fetch_offline_rooms(self):
-        rooms = self.session.query(Room).all()
-
-        for room in rooms:
-            if not room.sources:
-                continue
-
-            try:
-                classes = self.ruz_api.get_classes(room.ruz_id)
-            except Exception:
-                continue
-
-            for i in range(0, len(classes), 10):
-                chunk = classes[i : i + 10]
-                logger.info(f"Adding classes: {chunk}")
-                for lesson in chunk:
-                    event = self.calendar_api.create_event(room.calendar, lesson)
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = room.calendar
-                    nvr_api.add_lesson(lesson)
-                    self.create_record(room, event)
-                time.sleep(10)
-
-        logger.info(f"Created events for {datetime.today().date() + timedelta(days=1)}")
-
-    def fetch_online_rooms(self):
+        
+    def fetch_rooms(self):
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
+
+        offline_rooms = [room.name for room in self.session.query(Room).all()]
 
         rooms = self.ruz_api.get_auditoriumoid()
 
         for room in rooms:
             try:
-                classes = self.ruz_api.get_classes(room["auditoriumOid"], online=True)
+                classes = self.ruz_api.get_classes(room["auditoriumOid"])
                 classes_len = len(classes)
             except Exception as err:
                 logger.error(err, exc_info=True)
@@ -104,6 +81,10 @@ class CalendarManager:
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = ruz.calendar
                     nvr_api.add_lesson(lesson)
+
+                    if lesson['ruz_auditorium'] in offline_rooms:
+                        room = self.session.query(Room).filter_by(name=lesson['ruz_auditorium']).first()
+                        self.create_record(room, event)
 
                 logger.info(f"Adding jitsi classes: {jitsi_classes}")
                 for lesson in jitsi_classes:
@@ -156,5 +137,4 @@ class CalendarManager:
 
 if __name__ == "__main__":
     manager = CalendarManager()
-    manager.fetch_offline_rooms()
-    manager.fetch_online_rooms()
+    manager.fetch_rooms()
