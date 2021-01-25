@@ -4,12 +4,14 @@ import requests
 
 from ..settings import settings
 from ..utils import semlock, NVR
+from .calendar_api import GCalendar
 
 
 class Nvr_Api:
     NVR_API_URL = "http://localhost:8000"  # "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
     SERVICE = NVR
+    calendar = GCalendar()
 
     @semlock
     async def get_course_emails(self, course_code: str):
@@ -170,7 +172,7 @@ class Nvr_Api:
         return False
 
     @semlock
-    async def check_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium: str):
+    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium: str):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
         lessons_erudite = self.get_lessons_in_room(ruz_auditorium)
@@ -188,3 +190,7 @@ class Nvr_Api:
                         f"Lesson with ruz_lesson_oid -  {lesson_erudite['ruz_lesson_oid']}  - deleted"
                     )
                     await self.delete_lesson(lesson_erudite["id"])
+                    await self.calendar.delete_event(
+                        lesson_erudite["gcalendar_calendar_id"],
+                        lesson_erudite["gcalendar_event_id"],
+                    )
