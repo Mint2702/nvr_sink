@@ -1,7 +1,6 @@
 from aiohttp import ClientSession
 from loguru import logger
 import requests
-import json
 
 from ..settings import settings
 from ..utils import semlock, NVR
@@ -100,10 +99,12 @@ class Nvr_Api:
 
         return data
 
-    def get_lessons(self) -> list:
+    def get_lessons_in_room(self, ruz_auditorium: str) -> list:
         """ Gets all lessons from Erudite """
 
-        lessons = requests.get(f"{self.NVR_API_URL}/lessons").json()
+        lessons = requests.get(
+            f"{self.NVR_API_URL}/lessons", params={"ruz_auditorium": ruz_auditorium}
+        ).json()
 
         return lessons
 
@@ -139,10 +140,13 @@ class Nvr_Api:
         # If code run up to this point, it means that lesson with such ruz_lesson_oid is found in Erudite, but it differs from the one in RUZ, so it needs to be updated
         return ["Update", lesson_id, event_id]
 
-    def check_all_lessons(self, lessons_ruz: list) -> bool:
+    def check_all_lessons(self, lessons_ruz: list, ruz_auditorium: str) -> bool:
         """ Compares two lists of lessons of RUZ and Erudite, and decides if they are the same or not """
 
-        lessons_erudite = self.get_lessons()
+        lessons_erudite = self.get_lessons_in_room(ruz_auditorium)
+        if type(lessons_erudite) != list:
+            return False
+
         for lesson in lessons_erudite:
             lesson.pop("id")
             lesson.pop("gcalendar_event_id")
@@ -159,9 +163,28 @@ class Nvr_Api:
                         else:
                             flag = False
         else:
-            logger.error(len(lessons_erudite))
             return False
         if flag:
             return True
 
         return False
+
+    @semlock
+    async def check_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium: str):
+        """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
+
+        lessons_erudite = self.get_lessons_in_room(ruz_auditorium)
+        if type(lessons_erudite) == list:
+            for lesson_erudite in lessons_erudite:
+                flag = False
+                for lesson_ruz in lessons_ruz:
+                    if lesson_ruz["ruz_lesson_oid"] == lesson_erudite["ruz_lesson_oid"]:
+                        flag = True
+                        break
+                    else:
+                        continue
+                if not flag:
+                    logger.error(
+                        f"Lesson with ruz_lesson_oid -  {lesson_erudite['ruz_lesson_oid']}  - deleted"
+                    )
+                    await self.delete_lesson(lesson_erudite["id"])

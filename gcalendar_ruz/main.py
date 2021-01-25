@@ -61,7 +61,7 @@ class CalendarManager:
             logger.error(err)
 
         if classes:
-            if not self.nvr_api.check_all_lessons(classes):
+            if not self.nvr_api.check_all_lessons(classes, room.name):
                 logger.info(
                     f"""
                 Successfully got lessons for room {room.ruz_id}
@@ -74,6 +74,7 @@ class CalendarManager:
                     tasks = [self.add_offline_classes(room, lesson) for lesson in chunk]
                     await asyncio.gather(*tasks)
                     await asyncio.sleep(0.5)
+                await self.nvr_api.check_Erudite_lessons(classes, room.name)
             else:
                 logger.info("Lessons in Erudite and Ruz for offline rooms are the same")
 
@@ -128,7 +129,10 @@ class CalendarManager:
             logger.error(err)
             return False
 
-        tasks = [self.add_online_room(classes, i, ruz, jitsi) for i in range(0, classes_len, 10)]
+        tasks = [
+            self.add_online_room(classes, i, ruz, jitsi)
+            for i in range(0, classes_len, 10)
+        ]
 
         logger.info("Adding jitsi and RUZ classes")
 
@@ -146,7 +150,9 @@ class CalendarManager:
 
         await asyncio.gather(*tasks)
 
-        logger.info(f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n")
+        logger.info(
+            f"Creating events for {datetime.today().date() + timedelta(days=1)} done\n"
+        )
 
     async def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -155,7 +161,9 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        creator = (
+            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
+        )
         if not creator:
             return
 

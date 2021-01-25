@@ -29,7 +29,7 @@ def semlock(func):
             logger.error("Unsupported service")
 
         async with sem:
-            logger.debug(f"{service} semaphore for function {func.__name__}")
+            # logger.debug(f"{service} semaphore for function {func.__name__}")
             return await func(self, *args, **kwargs)
 
     return wrapper

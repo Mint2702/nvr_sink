@@ -2,7 +2,6 @@ import os.path
 import pickle
 from datetime import datetime, timedelta
 from aiohttp import ClientSession
-from loguru import logger
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -101,6 +100,7 @@ class GCalendar:
                 headers=self.HEADERS,
             )
 
+    @cache
     @token_check
     @semlock
     async def get_events(self, calendar_id: str) -> dict:
