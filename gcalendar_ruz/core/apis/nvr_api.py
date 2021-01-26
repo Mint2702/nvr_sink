@@ -26,8 +26,6 @@ class Nvr_Api:
             async with res:
                 data = await res.json()
 
-        logger.info(f"nvr.get_course_emails returned {res.status}")
-
         # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
         if type(data) == list:
             grp_emails = data[0].get("emails")
@@ -101,12 +99,17 @@ class Nvr_Api:
 
         return data
 
-    def get_lessons_in_room(self, ruz_auditorium: str) -> list:
+    @semlock
+    async def get_lessons_in_room(self, ruz_auditorium_oid: str) -> list:
         """ Gets all lessons from Erudite """
 
-        lessons = requests.get(
-            f"{self.NVR_API_URL}/lessons", params={"ruz_auditorium": ruz_auditorium}
-        ).json()
+        async with ClientSession() as session:
+            res = await session.get(
+                f"{self.NVR_API_URL}/lessons",
+                params={"ruz_auditorium_oid": ruz_auditorium_oid},
+            )
+            async with res:
+                lessons = await res.json()
 
         return lessons
 
@@ -142,10 +145,10 @@ class Nvr_Api:
         # If code run up to this point, it means that lesson with such ruz_lesson_oid is found in Erudite, but it differs from the one in RUZ, so it needs to be updated
         return ["Update", lesson_id, event_id]
 
-    def check_all_lessons(self, lessons_ruz: list, ruz_auditorium: str) -> bool:
+    def check_all_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str) -> bool:
         """ Compares two lists of lessons of RUZ and Erudite, and decides if they are the same or not """
 
-        lessons_erudite = self.get_lessons_in_room(ruz_auditorium)
+        lessons_erudite = self.get_lessons_in_room(ruz_auditorium_oid)
         if type(lessons_erudite) != list:
             return False
 
@@ -172,10 +175,14 @@ class Nvr_Api:
         return False
 
     @semlock
-    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium: str):
+    async def check_delete_Erudite_lessons(
+        self, lessons_ruz: list, ruz_auditorium_oid: str
+    ):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
-        lessons_erudite = self.get_lessons_in_room(ruz_auditorium)
+        print("lesson")
+        lessons_erudite = await self.get_lessons_in_room(ruz_auditorium_oid)
+        print(lessons_erudite)
         if type(lessons_erudite) == list:
             for lesson_erudite in lessons_erudite:
                 flag = False

@@ -73,12 +73,12 @@ class GCalendar:
             "description": lesson["description"],
         }
 
-        if lesson.get("ruz_lecturer_email"):
-            event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
-            if lesson.get("grp_emails"):
-                event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
+        # if lesson.get("ruz_lecturer_email"):
+        # event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
+        # if lesson.get("grp_emails"):
+        # event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 
-            event["reminders"] = {"useDefault": True}
+        # event["reminders"] = {"useDefault": True}
 
         async with ClientSession() as session:
             event_post = await session.post(
@@ -124,3 +124,33 @@ class GCalendar:
 
         events = events_result.get("items", [])
         return events
+
+    @token_check
+    @semlock
+    async def update_event(self, calendar_id: str, event_id: str, lesson: dict) -> str:
+        """ Updates an event in the google calendar """
+
+        event = {
+            "summary": lesson["summary"],
+            "location": lesson["location"],
+            "start": {
+                "dateTime": f"{lesson['date']}T{lesson['start_time']}:00",
+                "timeZone": "Europe/Moscow",
+            },
+            "end": {
+                "dateTime": f"{lesson['date']}T{lesson['end_time']}:00",
+                "timeZone": "Europe/Moscow",
+            },
+            "description": lesson["description"],
+        }
+
+        async with ClientSession() as session:
+            res = await session.put(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                json=event,
+                headers=self.HEADERS,
+            )
+            async with res:
+                data = await res.json()
+
+        return data
