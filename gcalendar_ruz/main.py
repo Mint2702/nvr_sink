@@ -48,7 +48,7 @@ class CalendarManager:
         ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
         jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
-        offline_rooms = [room.name for room in self.session.query(Room).all()]
+        offline_rooms = [room.name for room in self.session.query(Room).all() if room.sources]
 
         rooms = self.ruz_api.get_auditoriumoid()
 
