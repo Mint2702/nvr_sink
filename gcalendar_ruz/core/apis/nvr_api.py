@@ -175,14 +175,10 @@ class Nvr_Api:
         return False
 
     @semlock
-    async def check_delete_Erudite_lessons(
-        self, lessons_ruz: list, ruz_auditorium_oid: str
-    ):
+    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
-        print("lesson")
         lessons_erudite = await self.get_lessons_in_room(ruz_auditorium_oid)
-        print(lessons_erudite)
         if type(lessons_erudite) == list:
             for lesson_erudite in lessons_erudite:
                 flag = False
@@ -193,9 +189,6 @@ class Nvr_Api:
                     else:
                         continue
                 if not flag:
-                    logger.error(
-                        f"Lesson with ruz_lesson_oid -  {lesson_erudite['ruz_lesson_oid']}  - deleted"
-                    )
                     await self.delete_lesson(lesson_erudite["id"])
                     await self.calendar.delete_event(
                         lesson_erudite["gcalendar_calendar_id"],

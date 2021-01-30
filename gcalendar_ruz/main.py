@@ -48,10 +48,7 @@ class CalendarManager:
                 except Exception:
                     logger.error(f"Something wrong with Google - {event}.")
 
-            elif (
-                lesson["ruz_url"] is not None
-                and "meet.miem.hse.ru" in lesson["ruz_url"]
-            ):
+            elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
                 logger.info("Adding jitsi lesson")
                 event = await self.calendar_api.create_event(jitsi.calendar, lesson)
                 try:
@@ -67,9 +64,7 @@ class CalendarManager:
         elif status[0] == "Update":
             if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
                 logger.info("Updating ruz lesson")
-                event = await self.calendar_api.update_event(
-                    ruz.calendar, status[2], lesson
-                )
+                event = await self.calendar_api.update_event(ruz.calendar, status[2], lesson)
                 try:
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = ruz.calendar
@@ -85,14 +80,9 @@ class CalendarManager:
                 except Exception:
                     logger.error(f"Something wrong with Google - {event}.")
 
-            elif (
-                lesson["ruz_url"] is not None
-                and "meet.miem.hse.ru" in lesson["ruz_url"]
-            ):
+            elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
                 logger.info("Updating jitsi lesson")
-                event = await self.calendar_api.update_event(
-                    jitsi.calendar, status[2], lesson
-                )
+                event = await self.calendar_api.update_event(jitsi.calendar, status[2], lesson)
                 try:
                     lesson["gcalendar_event_id"] = event["id"]
                     lesson["gcalendar_calendar_id"] = jitsi.calendar
@@ -104,7 +94,9 @@ class CalendarManager:
 
         # Lesson found in Erudite and it is up to date
         else:
-            pass
+            return False
+
+        time.sleep(0.2)
 
     async def fetch_room(self, room_id: str, offline_rooms: list):
         print(room_id)
@@ -122,15 +114,12 @@ class CalendarManager:
                 Adding lessons to calendar and Erudite
                 """
                 )
-                for i in range(0, len(lessons), 3):
-                    chunk = lessons[i : i + 3]
+                for i in range(0, len(lessons), 10):
+                    chunk = lessons[i : i + 10]
 
-                    tasks = [
-                        self.add_lesson(room_id, lesson, offline_rooms)
-                        for lesson in chunk
-                    ]
+                    tasks = [self.add_lesson(room_id, lesson, offline_rooms) for lesson in chunk]
                     await asyncio.gather(*tasks)
-                    time.sleep(2)
+                    time.sleep(0.5)
                 await self.nvr_api.check_delete_Erudite_lessons(lessons, room_id)
             else:
                 logger.info("Lessons in Erudite and Ruz for offline rooms are the same")
@@ -148,9 +137,7 @@ class CalendarManager:
 
         rooms = await self.ruz_api.get_auditoriumoid()
 
-        tasks = [
-            self.fetch_room(room["auditoriumOid"], offline_rooms) for room in rooms
-        ]
+        tasks = [self.fetch_room(room["auditoriumOid"], offline_rooms) for room in rooms]
 
         await asyncio.gather(*tasks)
 
@@ -165,9 +152,7 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = (
-            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
-        )
+        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
         if not creator:
             return
 
