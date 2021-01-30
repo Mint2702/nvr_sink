@@ -10,7 +10,7 @@ RUZ = "ruz"
 
 sem_dict = {
     NVR: asyncio.Semaphore(100),
-    GOOGLE: asyncio.Semaphore(10),
+    GOOGLE: asyncio.Semaphore(3),
     RUZ: asyncio.Semaphore(10),
 }
 

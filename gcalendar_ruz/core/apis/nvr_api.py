@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 from loguru import logger
-import requests
+import time
 
 from ..settings import settings
 from ..utils import semlock, NVR
@@ -145,37 +145,10 @@ class Nvr_Api:
         # If code run up to this point, it means that lesson with such ruz_lesson_oid is found in Erudite, but it differs from the one in RUZ, so it needs to be updated
         return ["Update", lesson_id, event_id]
 
-    def check_all_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str) -> bool:
-        """ Compares two lists of lessons of RUZ and Erudite, and decides if they are the same or not """
-
-        lessons_erudite = self.get_lessons_in_room(ruz_auditorium_oid)
-        if type(lessons_erudite) != list:
-            return False
-
-        for lesson in lessons_erudite:
-            lesson.pop("id")
-            lesson.pop("gcalendar_event_id")
-            lesson.pop("gcalendar_calendar_id")
-
-        if len(lessons_ruz) == len(lessons_erudite):
-            flag = True
-            for lesson_erudite in lessons_erudite:
-                if flag:
-                    for lesson_ruz in lessons_ruz:
-                        if lesson_ruz == lesson_erudite:
-                            flag = True
-                            break
-                        else:
-                            flag = False
-        else:
-            return False
-        if flag:
-            return True
-
-        return False
-
     @semlock
-    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str):
+    async def check_delete_Erudite_lessons(
+        self, lessons_ruz: list, ruz_auditorium_oid: str
+    ):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
         lessons_erudite = await self.get_lessons_in_room(ruz_auditorium_oid)
@@ -194,3 +167,4 @@ class Nvr_Api:
                         lesson_erudite["gcalendar_calendar_id"],
                         lesson_erudite["gcalendar_event_id"],
                     )
+                    time.sleep(0.2)

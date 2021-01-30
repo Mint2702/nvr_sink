@@ -2,6 +2,7 @@ import os.path
 import pickle
 from datetime import datetime, timedelta
 from aiohttp import ClientSession
+from loguru import logger
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -100,31 +101,6 @@ class GCalendar:
                 headers=self.HEADERS,
             )
 
-    @cache
-    @token_check
-    @semlock
-    async def get_events(self, calendar_id: str) -> dict:
-        now = datetime.utcnow()
-        nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
-        nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
-        params = {
-            "timeMin": nowISO,
-            "timeMax": nowffISO,
-            "singleEvents": "True",
-            "orderBy": "startTime",
-        }
-        async with ClientSession() as session:
-            events_result = await session.get(
-                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
-                params=params,
-                headers=self.HEADERS,
-            )
-            async with events_result:
-                events_result = await events_result.json()
-
-        events = events_result.get("items", [])
-        return events
-
     @token_check
     @semlock
     async def update_event(self, calendar_id: str, event_id: str, lesson: dict) -> str:
@@ -153,4 +129,20 @@ class GCalendar:
             async with res:
                 data = await res.json()
 
+        logger.info(f"Update event returned code - {data.get('code')}.")
         return data
+
+    ############## Убрать на проде!
+    @token_check
+    @semlock
+    async def get_event(self, calendar_id: str, event_id: str) -> dict:
+        async with ClientSession() as session:
+            events_result = await session.get(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                headers=self.HEADERS,
+            )
+            async with events_result:
+                events_result = await events_result.json()
+
+        print(events_result)
+        return events
