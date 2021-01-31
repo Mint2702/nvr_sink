@@ -20,7 +20,75 @@ class CalendarManager:
     def __del__(self):
         self.session.close()
 
-    async def add_lesson(
+    async def add_lesson(self, lesson: dict, offline_rooms: list):
+        """ Adds lesson to Erudite and Google Calendar """
+
+        if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
+            logger.info("Adding ruz lesson")
+            event = await self.calendar_api.create_event(ruz.calendar, lesson)
+            try:
+                lesson["gcalendar_event_id"] = event["id"]
+                lesson["gcalendar_calendar_id"] = ruz.calendar
+                await self.nvr_api.add_lesson(lesson)
+
+                if lesson["ruz_auditorium"] in offline_rooms:
+                    room = (
+                        self.session.query(Room)
+                        .filter_by(name=lesson["ruz_auditorium"])
+                        .first()
+                    )
+                    self.create_record(room, event)
+            except Exception:
+                logger.error(f"Something wrong with Google - {event}.")
+
+        elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
+            logger.info("Adding jitsi lesson")
+            event = await self.calendar_api.create_event(jitsi.calendar, lesson)
+            try:
+                lesson["gcalendar_event_id"] = event["id"]
+                lesson["gcalendar_calendar_id"] = jitsi.calendar
+                await self.nvr_api.add_lesson(lesson)
+            except Exception:
+                logger.error(f"Something wrong with Google - {event}.")
+
+    async def update_lesson(
+        self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str
+    ):
+        """ Updates lesson in Erudite and Google Calendar """
+
+        if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
+            logger.info("Updating ruz lesson")
+            await self.calendar_api.get_event(ruz.calendar, event_id)
+            event = await self.calendar_api.update_event(ruz.calendar, event_id, lesson)
+            try:
+                lesson["gcalendar_event_id"] = event["id"]
+                lesson["gcalendar_calendar_id"] = ruz.calendar
+                await self.nvr_api.update_lesson(lesson_id, lesson)
+
+                if lesson["ruz_auditorium"] in offline_rooms:
+                    room = (
+                        self.session.query(Room)
+                        .filter_by(name=lesson["ruz_auditorium"])
+                        .first()
+                    )
+                    self.create_record(room, event)
+            except Exception:
+                logger.error(f"Something wrong with Google - {event}.")
+
+        elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
+            logger.info("Updating jitsi lesson")
+            await self.calendar_api.get_event(jitsi.calendar, event_id)
+            event = await self.calendar_api.update_event(
+                jitsi.calendar, event_id, lesson
+            )
+            try:
+                lesson["gcalendar_event_id"] = event["id"]
+                lesson["gcalendar_calendar_id"] = jitsi.calendar
+                await self.nvr_api.update_lesson(lesson_id, lesson)
+            except Exception:
+                logger.error(f"Something wrong with Google - {event}.")
+
+    async def synchronize_lesson(
         self,
         room_id: str,
         lesson: dict,
@@ -31,89 +99,18 @@ class CalendarManager:
 
         # Lesson not found in Erudite, so we add it
         if status == "Not found":
-            if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
-                logger.info("Adding ruz lesson")
-                event = await self.calendar_api.create_event(ruz.calendar, lesson)
-                try:
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = ruz.calendar
-                    await self.nvr_api.add_lesson(lesson)
-
-                    if lesson["ruz_auditorium"] in offline_rooms:
-                        room = (
-                            self.session.query(Room)
-                            .filter_by(name=lesson["ruz_auditorium"])
-                            .first()
-                        )
-                        self.create_record(room, event)
-                except Exception:
-                    logger.error(f"Something wrong with Google - {event}.")
-
-            elif (
-                lesson["ruz_url"] is not None
-                and "meet.miem.hse.ru" in lesson["ruz_url"]
-            ):
-                logger.info("Adding jitsi lesson")
-                event = await self.calendar_api.create_event(jitsi.calendar, lesson)
-                try:
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = jitsi.calendar
-                    await self.nvr_api.add_lesson(lesson)
-                except Exception:
-                    logger.error(f"Something wrong with Google - {event}.")
-            else:
-                pass
+            await self.add_lesson(lesson, offline_rooms)
 
         # Lesson found in Erudite, but the data of this lesson has to be updated
         elif status == "Update":
             lesson_id = check_data[1]
             event_id = check_data[2]
-            if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
-                logger.info("Updating ruz lesson")
-                await self.calendar_api.get_event(ruz.calendar, event_id)
-                event = await self.calendar_api.update_event(
-                    ruz.calendar, event_id, lesson
-                )
-                try:
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = ruz.calendar
-                    await self.nvr_api.update_lesson(lesson_id, lesson)
-
-                    if lesson["ruz_auditorium"] in offline_rooms:
-                        room = (
-                            self.session.query(Room)
-                            .filter_by(name=lesson["ruz_auditorium"])
-                            .first()
-                        )
-                        self.create_record(room, event)
-                except Exception:
-                    logger.error(f"Something wrong with Google - {event}.")
-
-            elif (
-                lesson["ruz_url"] is not None
-                and "meet.miem.hse.ru" in lesson["ruz_url"]
-            ):
-                logger.info("Updating jitsi lesson")
-                await self.calendar_api.get_event(jitsi.calendar, event_id)
-                event = await self.calendar_api.update_event(
-                    jitsi.calendar, event_id, lesson
-                )
-                try:
-                    lesson["gcalendar_event_id"] = event["id"]
-                    lesson["gcalendar_calendar_id"] = jitsi.calendar
-                    await self.nvr_api.update_lesson(lesson_id, lesson)
-                except Exception:
-                    logger.error(f"Something wrong with Google - {event}.")
-            else:
-                pass
-
+            await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
             time.sleep(0.3)
 
-        # Lesson found in Erudite and it is up to date
-        else:
-            return False
+        # Lesson found in Erudite and it is up to date -> do nothing
 
-    async def get_and_check_lessons_from_room(
+    async def synchronize_lessons_in_room(
         self, room_id: str, offline_rooms: list, room_name: str
     ):
         lessons = await self.get_lessons_from_room(room_id)
@@ -122,27 +119,30 @@ class CalendarManager:
             logger.info(
                 f"""
                 Successfully got lessons for room {room_name}
-                Adding lessons to calendar and Erudite
+                Synchronizing lessons in calendar and Erudite
                 """
             )
+            # Deletes lessons from Erudite if it doesn't exist in Ruz
+            await self.nvr_api.check_delete_Erudite_lessons(lessons, room_id)
+            time.sleep(0.3)
+
             for i in range(0, len(lessons), 5):
                 chunk = lessons[i : i + 5]
 
                 tasks = [
-                    self.add_lesson(room_id, lesson, offline_rooms) for lesson in chunk
+                    self.synchronize_lesson(room_id, lesson, offline_rooms)
+                    for lesson in chunk
                 ]
                 await asyncio.gather(*tasks)
                 time.sleep(0.4)
-            await self.nvr_api.check_delete_Erudite_lessons(lessons, room_id)
-            time.sleep(0.1)
 
-    async def get_and_handle_rooms(self):
+    async def get_rooms(self):
         offline_rooms = [room.name for room in self.session.query(Room).all()]
 
         rooms = await self.ruz_api.get_auditoriumoid()
 
         tasks = [
-            self.get_and_check_lessons_from_room(
+            self.synchronize_lessons_in_room(
                 room["auditoriumOid"], offline_rooms, room["number"]
             )
             for room in rooms
@@ -155,8 +155,10 @@ class CalendarManager:
         )
 
     async def get_lessons_from_room(self, room_id: str) -> list:
+        """ Get lessons in room from ruz """
+
         try:
-            lessons = await self.ruz_api.get_classes(room_id)
+            lessons = await self.ruz_api.get_lessons(room_id)
         except Exception as err:
             lessons = None
             logger.error(err)
@@ -164,6 +166,8 @@ class CalendarManager:
         return lessons
 
     async def get_online_rooms(self):
+        """ Get online rooms from DB """
+
         global ruz
         global jitsi
 
@@ -199,7 +203,7 @@ async def main():
     await redis_connect()
     manager = CalendarManager()
 
-    tasks = [manager.get_and_handle_rooms(), manager.get_online_rooms()]
+    tasks = [manager.get_rooms(), manager.get_online_rooms()]
 
     await asyncio.gather(*tasks)
 

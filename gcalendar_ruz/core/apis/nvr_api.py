@@ -25,6 +25,7 @@ class Nvr_Api:
             )
             async with res:
                 data = await res.json()
+        await session.close()
 
         # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
         if type(data) == list:
@@ -47,6 +48,8 @@ class Nvr_Api:
                 json=lesson,
                 headers={"key": self.NVR_API_KEY},
             )
+        await session.close()
+
         logger.info(f"nvr.add_lesson returned {res.status}")
 
     @semlock
@@ -58,6 +61,8 @@ class Nvr_Api:
                 f"{self.NVR_API_URL}/lessons/{lesson_id}",
                 headers={"key": self.NVR_API_KEY},
             )
+        await session.close()
+
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} deleted")
         elif res.status == 404:
@@ -75,6 +80,7 @@ class Nvr_Api:
                 json=lesson_data,
                 headers={"key": self.NVR_API_KEY},
             )
+        await session.close()
 
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} updated")
@@ -92,6 +98,7 @@ class Nvr_Api:
             )
             async with res:
                 data = await res.json()
+        await session.close()
 
         if type(data) != list:
             # This means that there is no such lesson found in Erudite
@@ -110,6 +117,7 @@ class Nvr_Api:
             )
             async with res:
                 lessons = await res.json()
+        await session.close()
 
         return lessons
 

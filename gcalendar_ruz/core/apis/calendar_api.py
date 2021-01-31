@@ -1,6 +1,5 @@
 import os.path
 import pickle
-from datetime import datetime, timedelta
 from aiohttp import ClientSession
 from loguru import logger
 
@@ -8,7 +7,6 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from ..redis_caching.caching import cache
 from ..utils import semlock, GOOGLE, token_check
 
 
@@ -48,13 +46,7 @@ class GCalendar:
             with open(TOKEN_PATH, "wb") as token:
                 pickle.dump(self.creds, token)
 
-    @token_check
-    @semlock
-    async def create_event(
-        self,
-        calendar_id: str,
-        lesson: dict,
-    ) -> str:
+    def parse_lesson_to_event(self, lesson: dict) -> dict:
         """
         format: "%Y-%m-%dT%H:%M:%S"
         ex: 2019-11-12T15:00
@@ -81,6 +73,17 @@ class GCalendar:
 
         # event["reminders"] = {"useDefault": True}
 
+        return event
+
+    @token_check
+    @semlock
+    async def create_event(
+        self,
+        calendar_id: str,
+        lesson: dict,
+    ) -> str:
+        event = self.parse_lesson_to_event(lesson)
+
         async with ClientSession() as session:
             event_post = await session.post(
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
@@ -106,19 +109,7 @@ class GCalendar:
     async def update_event(self, calendar_id: str, event_id: str, lesson: dict) -> str:
         """ Updates an event in the google calendar """
 
-        event = {
-            "summary": lesson["summary"],
-            "location": lesson["location"],
-            "start": {
-                "dateTime": f"{lesson['date']}T{lesson['start_time']}:00",
-                "timeZone": "Europe/Moscow",
-            },
-            "end": {
-                "dateTime": f"{lesson['date']}T{lesson['end_time']}:00",
-                "timeZone": "Europe/Moscow",
-            },
-            "description": lesson["description"],
-        }
+        event = self.parse_lesson_to_event(lesson)
 
         async with ClientSession() as session:
             res = await session.put(

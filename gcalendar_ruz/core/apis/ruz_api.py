@@ -32,9 +32,9 @@ class RuzApi:
 
     @cache
     @semlock
-    async def get_classes(self, ruz_room_id: str, online: bool = False):
+    async def get_lessons(self, ruz_room_id: str, online: bool = False):
         """
-        Get classes in room for 60 days
+        Get lessons in room for 60 days
         """
 
         needed_date = (datetime.today() + timedelta(days=60)).strftime("%Y.%m.%d")
@@ -47,9 +47,9 @@ class RuzApi:
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
             async with res:
-                res = await res.json()
+                res = await res.json(content_type=None)
 
-        classes = []
+        lessons = []
         for class_ in res:
             lesson = {}
 
@@ -91,6 +91,6 @@ class RuzApi:
                         lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
                     )
 
-            classes.append(lesson)
+            lessons.append(lesson)
 
-        return classes
+        return lessons
