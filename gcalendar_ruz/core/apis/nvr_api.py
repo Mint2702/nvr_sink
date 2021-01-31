@@ -50,7 +50,14 @@ class Nvr_Api:
             )
         await session.close()
 
-        logger.info(f"nvr.add_lesson returned {res.status}")
+        if res.status == 201:
+            logger.info("Lesson added to Erudite")
+        else:
+            lesson = str(lesson)
+            for char in lesson:
+                if char == "'":
+                    lesson = lesson.replace(char, '"')
+            logger.error(f"Lesson could not be added to Erudite properly - {lesson}")
 
     @semlock
     async def delete_lesson(self, lesson_id: str):
@@ -175,4 +182,4 @@ class Nvr_Api:
                         lesson_erudite["gcalendar_calendar_id"],
                         lesson_erudite["gcalendar_event_id"],
                     )
-                    time.sleep(0.2)
+                    time.sleep(0.3)

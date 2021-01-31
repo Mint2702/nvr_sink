@@ -92,6 +92,7 @@ class GCalendar:
             )
             async with event_post:
                 event_json = await event_post.json()
+        logger.info("Event created")
 
         return event_json
 
@@ -103,6 +104,8 @@ class GCalendar:
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
                 headers=self.HEADERS,
             )
+
+        logger.info("Event deleted from Google Calendar")
 
     @token_check
     @semlock
@@ -120,7 +123,7 @@ class GCalendar:
             async with res:
                 data = await res.json()
 
-        logger.info(f"Update event returned code - {data.get('code')}.")
+        logger.info(f"Update event returned code - {data.get('status')}.")
         return data
 
     ############## Убрать на проде!
@@ -135,5 +138,4 @@ class GCalendar:
             async with events_result:
                 events_result = await events_result.json()
 
-        print(events_result)
-        return events
+        return events_result

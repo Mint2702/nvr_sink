@@ -10,7 +10,7 @@ RUZ = "ruz"
 
 sem_dict = {
     NVR: asyncio.Semaphore(100),
-    GOOGLE: asyncio.Semaphore(3),
+    GOOGLE: asyncio.Semaphore(5),
     RUZ: asyncio.Semaphore(10),
 }
 
@@ -41,6 +41,11 @@ def token_check(func):
         if not self.creds or self.creds.expired:
             logger.info("Refresh google tokens")
             self.refresh_token()
+
+        self.HEADERS = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.creds.token}",
+        }
 
         return await func(self, *args, **kwargs)
 
