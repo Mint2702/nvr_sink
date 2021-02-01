@@ -11,8 +11,8 @@ from ..utils import semlock, GOOGLE, token_check, handle_google_errors
 from ..settings import settings
 
 
-CREDS_PATH = "core/creds/credentials.json"
-TOKEN_PATH = "core/creds/tokenCalendar.pickle"
+CREDS_PATH = settings.creds_path
+TOKEN_PATH = settings.token_path
 SCOPES = "https://www.googleapis.com/auth/calendar"
 
 
