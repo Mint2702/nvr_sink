@@ -100,14 +100,14 @@ class CalendarManager:
         # Lesson not found in Erudite, so we add it
         if status == "Not found":
             await self.add_lesson(lesson, offline_rooms)
-            time.sleep(0.6)
+            time.sleep(0.1)
 
         # Lesson found in Erudite, but the data of this lesson has to be updated
         elif status == "Update":
             lesson_id = check_data[1]
             event_id = check_data[2]
             await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
-            time.sleep(0.6)
+            time.sleep(0.1)
 
     async def synchronize_lessons_in_room(
         self, room_id: str, offline_rooms: list, room_name: str

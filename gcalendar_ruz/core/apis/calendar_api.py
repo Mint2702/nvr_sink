@@ -7,7 +7,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from ..utils import semlock, GOOGLE, token_check
+from ..utils import semlock, GOOGLE, token_check, handle_google_errors
 
 
 CREDS_PATH = "core/creds/credentials.json"
@@ -75,6 +75,7 @@ class GCalendar:
 
         return event
 
+    @handle_google_errors
     @token_check
     @semlock
     async def create_event(
@@ -96,17 +97,22 @@ class GCalendar:
 
         return event_json
 
+    @handle_google_errors
     @token_check
     @semlock
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
-            await session.delete(
+            res = await session.delete(
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
                 headers=self.HEADERS,
             )
+            async with res:
+                res = await res.json()
 
         logger.info("Event deleted from Google Calendar")
+        return res
 
+    @handle_google_errors
     @token_check
     @semlock
     async def update_event(self, calendar_id: str, event_id: str, lesson: dict) -> str:
@@ -125,17 +131,3 @@ class GCalendar:
 
         logger.info(f"Update event returned code - {data.get('status')}.")
         return data
-
-    ############## Убрать на проде!
-    @token_check
-    @semlock
-    async def get_event(self, calendar_id: str, event_id: str) -> dict:
-        async with ClientSession() as session:
-            events_result = await session.get(
-                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
-                headers=self.HEADERS,
-            )
-            async with events_result:
-                events_result = await events_result.json()
-
-        return events_result
