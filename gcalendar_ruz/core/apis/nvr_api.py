@@ -67,7 +67,7 @@ class Nvr_Api:
                 headers={"key": self.NVR_API_KEY},
             )
             async with res:
-                data = await res.json()
+                await res.json()
 
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} deleted")
@@ -88,7 +88,7 @@ class Nvr_Api:
                 headers={"key": self.NVR_API_KEY},
             )
             async with res:
-                data = await res.json()
+                await res.json()
 
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} updated")
@@ -163,7 +163,9 @@ class Nvr_Api:
         return ["Update", lesson_id, event_id]
 
     @semlock
-    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str):
+    async def check_delete_Erudite_lessons(
+        self, lessons_ruz: list, ruz_auditorium_oid: str
+    ):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
         lessons_erudite = await self.get_lessons_in_room(ruz_auditorium_oid)

@@ -5,6 +5,7 @@ from .nvr_api import Nvr_Api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
 from ..utils import semlock, RUZ
+from ..settings import settings
 
 
 class RuzApi:
@@ -13,6 +14,7 @@ class RuzApi:
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
         self.url = url
         self.nvr_api = Nvr_Api()
+        self.period = settings.period
 
     # building id МИЭМа = 92
     @cache
@@ -34,10 +36,12 @@ class RuzApi:
     @semlock
     async def get_lessons(self, ruz_room_id: str, online: bool = False):
         """
-        Get lessons in room for 60 days
+        Get lessons in room for a specified period
         """
 
-        needed_date = (datetime.today() + timedelta(days=60)).strftime("%Y.%m.%d")
+        needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
+            "%Y.%m.%d"
+        )
         today = datetime.today().strftime("%Y.%m.%d")
 
         params = dict(

@@ -60,7 +60,7 @@ def handle_google_errors(func):
         result = await func(self, *args, **kwargs)
         try:
             error = result["error"]["errors"][0]["reason"]
-        except:
+        except Exception:
             return result
 
         if error == "rateLimitExceeded":

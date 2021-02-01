@@ -1,6 +1,5 @@
 import os.path
 import pickle
-import time
 from aiohttp import ClientSession
 from loguru import logger
 from datetime import datetime, timedelta
@@ -10,6 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from ..utils import semlock, GOOGLE, token_check, handle_google_errors
+from ..settings import settings
 
 
 CREDS_PATH = "core/creds/credentials.json"
@@ -26,6 +26,7 @@ class GCalendar:
         """
 
         self.refresh_token()
+        self.period = settings.period
 
         self.HEADERS = {
             "Content-Type": "application/json",
@@ -137,10 +138,11 @@ class GCalendar:
         logger.info(f"Update event returned code - {data.get('status')}.")
         return data
 
+    @token_check
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
-        nowffISO = (now + timedelta(days=60)).isoformat() + "Z"
+        nowffISO = (now + timedelta(days=self.period)).isoformat() + "Z"
         params = {
             "timeMin": nowISO,
             "timeMax": nowffISO,
