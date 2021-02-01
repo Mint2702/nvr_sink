@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 
 from ..utils import semlock, GOOGLE, token_check, handle_google_errors
 from ..settings import settings
@@ -32,8 +31,6 @@ class GCalendar:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.creds.token}",
         }
-
-        self.service = build("calendar", "v3", credentials=self.creds)
 
     def refresh_token(self):
         self.creds = None
@@ -69,13 +66,12 @@ class GCalendar:
             "description": lesson["description"],
         }
 
-        # if lesson.get("ruz_lecturer_email"):
-        # event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
-        # if lesson.get("grp_emails"):
-        # event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
+        if lesson.get("miem_lecturer_email"):
+            event["attendees"] = [{"email": lesson["miem_lecturer_email"]}]
+        if lesson.get("grp_emails"):
+            event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 
-        # event["reminders"] = {"useDefault": True}
-
+        event["reminders"] = {"useDefault": True}
         return event
 
     @handle_google_errors
@@ -133,6 +129,7 @@ class GCalendar:
                 headers=self.HEADERS,
             )
             async with res:
+                print(await res.text())
                 data = await res.json()
 
         logger.info(f"Update event returned code - {data.get('status')}.")

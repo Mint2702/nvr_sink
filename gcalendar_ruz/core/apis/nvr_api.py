@@ -8,7 +8,7 @@ from .calendar_api import GCalendar
 
 
 class Nvr_Api:
-    NVR_API_URL = "http://localhost:8000"  # "https://nvr.miem.hse.ru/api/erudite"
+    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
     SERVICE = NVR
     calendar = GCalendar()
@@ -129,6 +129,7 @@ class Nvr_Api:
             return lessons
         else:
             logger.info("Lesson not found")
+            return []
 
     @semlock
     async def delete_copies(self, data: list) -> dict:

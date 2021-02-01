@@ -52,7 +52,7 @@ class CalendarManager:
                 event = await self.post_lesson(
                     lesson, erudite_lesson["id"], ruz.calendar
                 )
-                time.sleep(0.6)
+                # time.sleep(0.6)
 
             if lesson["ruz_auditorium"] in offline_rooms:
                 room = (
@@ -119,7 +119,7 @@ class CalendarManager:
             lesson_id = check_data[1]
             event_id = check_data[2]
             await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
-            time.sleep(0.6)
+            # time.sleep(0.6)
 
     async def synchronize_lessons_in_room(
         self, room_id: str, offline_rooms: list, room_name: str
@@ -230,8 +230,7 @@ async def main():
 
     manager.get_online_rooms()
 
-    # await asyncio.gather(manager.get_rooms())
-    await asyncio.gather(manager.delete_online_events())
+    await asyncio.gather(manager.get_rooms())
 
 
 if __name__ == "__main__":

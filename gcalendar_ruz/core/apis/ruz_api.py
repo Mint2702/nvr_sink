@@ -34,7 +34,7 @@ class RuzApi:
 
     @cache
     @semlock
-    async def get_lessons(self, ruz_room_id: str, online: bool = False):
+    async def get_lessons(self, ruz_room_id: str):
         """
         Get lessons in room for a specified period
         """
@@ -88,12 +88,13 @@ class RuzApi:
                 f"Тип занятия: {lesson['ruz_kind_of_work']}\n"
             )
 
-            if lesson["ruz_url"] and online:
+            if lesson["ruz_url"]:
                 lesson["description"] += f"URL: {lesson['ruz_url']}\n"
-                if lesson.get("ruz_lecturer_email"):  # None or ""
-                    lesson["ruz_lecturer_email"] = (
-                        lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
-                    )
+
+            if lesson.get("ruz_lecturer_email"):  # None or ""
+                lesson["miem_lecturer_email"] = (
+                    lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
+                )
 
             lessons.append(lesson)
 

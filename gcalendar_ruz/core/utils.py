@@ -31,7 +31,6 @@ def semlock(func):
             logger.error("Unsupported service")
 
         async with sem:
-            # logger.debug(f"{service} semaphore for function {func.__name__}")
             return await func(self, *args, **kwargs)
 
     return wrapper
@@ -66,7 +65,7 @@ def handle_google_errors(func):
         if error == "rateLimitExceeded":
             logger.error("Rate limit for google exceeded")
             time.sleep(11)
-            return await func(self, *args, **kwargs)
+            return await wrapper(self, *args, **kwargs)
         elif error == "quotaExceeded":
             logger.error("Usage limit for google exceeded")
             sys.exit(1)
