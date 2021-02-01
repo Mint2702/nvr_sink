@@ -5,6 +5,7 @@ from .nvr_api import Nvr_Api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
 from ..utils import semlock, RUZ
+from ..settings import settings
 
 
 class RuzApi:
@@ -13,6 +14,7 @@ class RuzApi:
     def __init__(self, url: str = "http://92.242.58.221/ruzservice.svc"):
         self.url = url
         self.nvr_api = Nvr_Api()
+        self.period = settings.period
 
     # building id МИЭМа = 92
     @cache
@@ -26,27 +28,32 @@ class RuzApi:
         return [
             room
             for room in all_auditories
-            if room["buildingGid"] == building_id and room["typeOfAuditorium"] != "Неаудиторные"
+            if room["buildingGid"] == building_id
+            and room["typeOfAuditorium"] != "Неаудиторные"
         ]
 
     @cache
     @semlock
-    async def get_classes(self, ruz_room_id: str, online: bool = False):
+    async def get_lessons(self, ruz_room_id: str):
         """
-        Get classes in room for 1 week
-        Function that requests information about classes for 1 day from today and returns list of dicts
+        Get lessons in room for a specified period
         """
 
-        needed_date = (datetime.today() + timedelta(days=1)).strftime("%Y.%m.%d")
+        needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
+            "%Y.%m.%d"
+        )
+        today = datetime.today().strftime("%Y.%m.%d")
 
-        params = dict(fromdate=needed_date, todate=needed_date, auditoriumoid=str(ruz_room_id))
+        params = dict(
+            fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id)
+        )
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/lessons", params=params)
             async with res:
-                res = await res.json()
+                res = await res.json(content_type=None)
 
-        classes = []
+        lessons = []
         for class_ in res:
             lesson = {}
 
@@ -81,13 +88,14 @@ class RuzApi:
                 f"Тип занятия: {lesson['ruz_kind_of_work']}\n"
             )
 
-            if lesson["ruz_url"] and online:
+            if lesson["ruz_url"]:
                 lesson["description"] += f"URL: {lesson['ruz_url']}\n"
-                if lesson.get("ruz_lecturer_email"):  # None or ""
-                    lesson["ruz_lecturer_email"] = (
-                        lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
-                    )
 
-            classes.append(lesson)
+            if lesson.get("ruz_lecturer_email"):  # None or ""
+                lesson["miem_lecturer_email"] = (
+                    lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
+                )
 
-        return classes
+            lessons.append(lesson)
+
+        return lessons

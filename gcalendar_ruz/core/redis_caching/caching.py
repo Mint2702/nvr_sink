@@ -1,4 +1,3 @@
-import asyncio
 from aredis import StrictRedis
 from datetime import timedelta
 import json
@@ -65,7 +64,7 @@ def cache(func):
             return None
 
         if client:
-            state = await set_routes_to_cache(key=cache_key, value=json.dumps(data))
+            await set_routes_to_cache(key=cache_key, value=json.dumps(data))
 
         return data
 

@@ -1,14 +1,14 @@
 import os.path
 import pickle
-from datetime import datetime, timedelta
 from aiohttp import ClientSession
+from loguru import logger
+from datetime import datetime, timedelta
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 
-from ..redis_caching.caching import cache
-from ..utils import semlock, GOOGLE, token_check
+from ..utils import semlock, GOOGLE, token_check, handle_google_errors
+from ..settings import settings
 
 
 CREDS_PATH = "core/creds/credentials.json"
@@ -25,13 +25,12 @@ class GCalendar:
         """
 
         self.refresh_token()
+        self.period = settings.period
 
         self.HEADERS = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.creds.token}",
         }
-
-        self.service = build("calendar", "v3", credentials=self.creds)
 
     def refresh_token(self):
         self.creds = None
@@ -47,13 +46,7 @@ class GCalendar:
             with open(TOKEN_PATH, "wb") as token:
                 pickle.dump(self.creds, token)
 
-    @token_check
-    @semlock
-    async def create_event(
-        self,
-        calendar_id: str,
-        lesson: dict,
-    ) -> str:
+    def parse_lesson_to_event(self, lesson: dict) -> dict:
         """
         format: "%Y-%m-%dT%H:%M:%S"
         ex: 2019-11-12T15:00
@@ -73,12 +66,23 @@ class GCalendar:
             "description": lesson["description"],
         }
 
-        if lesson.get("ruz_lecturer_email"):
-            event["attendees"] = [{"email": lesson["ruz_lecturer_email"]}]
-            if lesson.get("grp_emails"):
-                event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
+        if lesson.get("miem_lecturer_email"):
+            event["attendees"] = [{"email": lesson["miem_lecturer_email"]}]
+        if lesson.get("grp_emails"):
+            event["attendees"] += [{"email": grp} for grp in lesson["grp_emails"]]
 
-            event["reminders"] = {"useDefault": True}
+        event["reminders"] = {"useDefault": True}
+        return event
+
+    @handle_google_errors
+    @token_check
+    @semlock
+    async def create_event(
+        self,
+        calendar_id: str,
+        lesson: dict,
+    ) -> str:
+        event = self.parse_lesson_to_event(lesson)
 
         async with ClientSession() as session:
             event_post = await session.post(
@@ -88,34 +92,69 @@ class GCalendar:
             )
             async with event_post:
                 event_json = await event_post.json()
+        logger.info("Event created")
 
         return event_json
 
+    @handle_google_errors
     @token_check
     @semlock
     async def delete_event(self, calendar_id, event_id):
         async with ClientSession() as session:
-            await session.delete(
-                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}"
+            res = await session.delete(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                headers=self.HEADERS,
             )
+            async with res:
+                res = await res.json(content_type=None)
 
-    @cache
+        if res is None:
+            logger.info("Event deleted from Google Calendar")
+        else:
+            print(res)
+            return res
+
+    @handle_google_errors
     @token_check
     @semlock
+    async def update_event(self, calendar_id: str, event_id: str, lesson: dict) -> str:
+        """ Updates an event in the google calendar """
+
+        event = self.parse_lesson_to_event(lesson)
+
+        async with ClientSession() as session:
+            res = await session.put(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                json=event,
+                headers=self.HEADERS,
+            )
+            async with res:
+                print(await res.text())
+                data = await res.json()
+
+        logger.info(f"Update event returned code - {data.get('status')}.")
+        return data
+
+    @token_check
     async def get_events(self, calendar_id: str) -> dict:
         now = datetime.utcnow()
         nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
-        nowffISO = (now + timedelta(days=1)).isoformat() + "Z"
+        nowffISO = (now + timedelta(days=self.period)).isoformat() + "Z"
+        params = {
+            "timeMin": nowISO,
+            "timeMax": nowffISO,
+            "singleEvents": "True",
+            "orderBy": "startTime",
+            "maxResults": 2499,
+        }
         async with ClientSession() as session:
-            events_result = await session.get(
+            res = await session.get(
                 f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
-                timeMin=nowISO,
-                timeMax=nowffISO,
-                singleEvents=True,
-                orderBy="startTime",
+                headers=self.HEADERS,
+                params=params,
             )
-            async with events_result:
-                events_result = events_result.json()
+            async with res:
+                data = await res.json()
 
-        events = events_result.get("items", [])
+        events = data.get("items", [])
         return events

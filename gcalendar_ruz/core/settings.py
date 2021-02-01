@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     nvr_api_key: str = Field(..., env="NVR_API_KEY")
     db_url: str = Field(..., env="DB_URL")
     url_redis: str = Field(..., env="URL_REDIS")
+    period: int = Field(..., env="PERIOD")
 
     class Config:
         env_file = ".env"
