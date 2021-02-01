@@ -58,17 +58,23 @@ def handle_google_errors(func):
     async def wrapper(self, *args, **kwargs):
         result = await func(self, *args, **kwargs)
         try:
-            error = result["error"]["errors"][0]["reason"]
+            error = result["error"]
         except Exception:
+            error = None
             return result
 
-        if error == "rateLimitExceeded":
-            logger.error("Rate limit for google exceeded")
-            time.sleep(11)
-            return await wrapper(self, *args, **kwargs)
-        elif error == "quotaExceeded":
-            logger.error("Usage limit for google exceeded")
-            sys.exit(1)
+        if error:
+            error_reason = error["errors"][0]["reason"]
+            if error_reason == "rateLimitExceeded":
+                logger.error("Rate limit for google exceeded")
+                time.sleep(11)
+                return await wrapper(self, *args, **kwargs)
+            elif error_reason == "quotaExceeded":
+                logger.error("Usage limit for google exceeded")
+                sys.exit(1)
+            else:
+                logger.error(f"Other reason  -  {result}")
+
         else:
             return result
 
