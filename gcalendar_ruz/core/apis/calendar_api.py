@@ -1,7 +1,9 @@
 import os.path
 import pickle
+import time
 from aiohttp import ClientSession
 from loguru import logger
+from datetime import datetime, timedelta
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -107,10 +109,13 @@ class GCalendar:
                 headers=self.HEADERS,
             )
             async with res:
-                res = await res.json()
+                res = await res.json(content_type=None)
 
-        logger.info("Event deleted from Google Calendar")
-        return res
+        if res is None:
+            logger.info("Event deleted from Google Calendar")
+        else:
+            print(res)
+            return res
 
     @handle_google_errors
     @token_check
@@ -131,3 +136,26 @@ class GCalendar:
 
         logger.info(f"Update event returned code - {data.get('status')}.")
         return data
+
+    async def get_events(self, calendar_id: str) -> dict:
+        now = datetime.utcnow()
+        nowISO = now.isoformat() + "Z"  # 'Z' indicates UTC time
+        nowffISO = (now + timedelta(days=60)).isoformat() + "Z"
+        params = {
+            "timeMin": nowISO,
+            "timeMax": nowffISO,
+            "singleEvents": "True",
+            "orderBy": "startTime",
+            "maxResults": 2499,
+        }
+        async with ClientSession() as session:
+            res = await session.get(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
+                headers=self.HEADERS,
+                params=params,
+            )
+            async with res:
+                data = await res.json()
+
+        events = data.get("items", [])
+        return events

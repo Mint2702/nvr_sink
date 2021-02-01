@@ -25,10 +25,9 @@ class Nvr_Api:
             )
             async with res:
                 data = await res.json()
-        await session.close()
 
         # If the responce is not list -> the responce is a message that discipline is not found, and it should not be analysed further
-        if type(data) == list:
+        if res.status == 200:
             grp_emails = data[0].get("emails")
         else:
             return None
@@ -39,7 +38,7 @@ class Nvr_Api:
         return grp_emails
 
     @semlock
-    async def add_lesson(self, lesson: dict):
+    async def add_lesson(self, lesson: dict) -> int:
         """ Posts a lesson to Erudite """
 
         async with ClientSession() as session:
@@ -48,16 +47,15 @@ class Nvr_Api:
                 json=lesson,
                 headers={"key": self.NVR_API_KEY},
             )
-        await session.close()
+            async with res:
+                data = await res.json()
 
         if res.status == 201:
             logger.info("Lesson added to Erudite")
         else:
-            lesson = str(lesson)
-            for char in lesson:
-                if char == "'":
-                    lesson = lesson.replace(char, '"')
-            logger.error(f"Lesson could not be added to Erudite properly - {lesson}")
+            logger.error("Lesson could not be added to Erudite properly")
+
+        return [res.status, data]
 
     @semlock
     async def delete_lesson(self, lesson_id: str):
@@ -68,10 +66,12 @@ class Nvr_Api:
                 f"{self.NVR_API_URL}/lessons/{lesson_id}",
                 headers={"key": self.NVR_API_KEY},
             )
-        await session.close()
+            async with res:
+                data = await res.json()
 
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} deleted")
+            return
         elif res.status == 404:
             logger.info(f"Lesson with id: {lesson_id} is not found in Erudite")
         else:
@@ -87,7 +87,8 @@ class Nvr_Api:
                 json=lesson_data,
                 headers={"key": self.NVR_API_KEY},
             )
-        await session.close()
+            async with res:
+                data = await res.json()
 
         if res.status == 200:
             logger.info(f"Lesson with id: {lesson_id} updated")
@@ -105,9 +106,8 @@ class Nvr_Api:
             )
             async with res:
                 data = await res.json()
-        await session.close()
 
-        if type(data) != list:
+        if res.status != 200:
             # This means that there is no such lesson found in Erudite
             return False
 
@@ -124,9 +124,11 @@ class Nvr_Api:
             )
             async with res:
                 lessons = await res.json()
-        await session.close()
 
-        return lessons
+        if res.status == 200:
+            return lessons
+        else:
+            logger.info("Lesson not found")
 
     @semlock
     async def delete_copies(self, data: list) -> dict:
@@ -161,25 +163,22 @@ class Nvr_Api:
         return ["Update", lesson_id, event_id]
 
     @semlock
-    async def check_delete_Erudite_lessons(
-        self, lessons_ruz: list, ruz_auditorium_oid: str
-    ):
+    async def check_delete_Erudite_lessons(self, lessons_ruz: list, ruz_auditorium_oid: str):
         """ Check all lessons from room in Erudite, if the lesson doesn't exist in RUZ - delete it """
 
         lessons_erudite = await self.get_lessons_in_room(ruz_auditorium_oid)
-        if type(lessons_erudite) == list:
-            for lesson_erudite in lessons_erudite:
-                flag = False
-                for lesson_ruz in lessons_ruz:
-                    if lesson_ruz["ruz_lesson_oid"] == lesson_erudite["ruz_lesson_oid"]:
-                        flag = True
-                        break
-                    else:
-                        continue
-                if not flag:
-                    await self.delete_lesson(lesson_erudite["id"])
-                    await self.calendar.delete_event(
-                        lesson_erudite["gcalendar_calendar_id"],
-                        lesson_erudite["gcalendar_event_id"],
-                    )
-                    time.sleep(0.3)
+        for lesson_erudite in lessons_erudite:
+            flag = False
+            for lesson_ruz in lessons_ruz:
+                if lesson_ruz["ruz_lesson_oid"] == lesson_erudite["ruz_lesson_oid"]:
+                    flag = True
+                    break
+                else:
+                    continue
+            if not flag:
+                await self.delete_lesson(lesson_erudite["id"])
+                await self.calendar.delete_event(
+                    lesson_erudite["gcalendar_calendar_id"],
+                    lesson_erudite["gcalendar_event_id"],
+                )
+                time.sleep(0.3)
