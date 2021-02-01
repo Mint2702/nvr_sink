@@ -64,7 +64,11 @@ def handle_google_errors(func):
             return result
 
         if error:
-            error_reason = error["errors"][0]["reason"]
+            try:
+                error_reason = error["errors"][0]["reason"]
+            except Exception:
+                error_reason = None
+
             if error_reason == "rateLimitExceeded":
                 logger.error("Rate limit for google exceeded")
                 time.sleep(11)
