@@ -49,17 +49,11 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201:
-                event = await self.post_lesson(
-                    lesson, erudite_lesson["id"], ruz.calendar
-                )
-                # time.sleep(0.6)
+                event = await self.post_lesson(lesson, erudite_lesson["id"], ruz.calendar)
+                time.sleep(0.6)
 
             if lesson["ruz_auditorium"] in offline_rooms:
-                room = (
-                    self.session.query(Room)
-                    .filter_by(name=lesson["ruz_auditorium"])
-                    .first()
-                )
+                room = self.session.query(Room).filter_by(name=lesson["ruz_auditorium"]).first()
                 self.create_record(room, event)
 
         elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
@@ -68,13 +62,9 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201:
-                event = await self.post_lesson(
-                    lesson, erudite_lesson["id"], jitsi.calendar
-                )
+                event = await self.post_lesson(lesson, erudite_lesson["id"], jitsi.calendar)
 
-    async def update_lesson(
-        self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str
-    ):
+    async def update_lesson(self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str):
         """ Updates lesson in Erudite and Google Calendar """
 
         if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
@@ -85,18 +75,12 @@ class CalendarManager:
             await self.nvr_api.update_lesson(lesson_id, lesson)
 
             if lesson["ruz_auditorium"] in offline_rooms:
-                room = (
-                    self.session.query(Room)
-                    .filter_by(name=lesson["ruz_auditorium"])
-                    .first()
-                )
+                room = self.session.query(Room).filter_by(name=lesson["ruz_auditorium"]).first()
                 self.create_record(room, event)
 
         elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
             logger.info("Updating jitsi lesson")
-            event = await self.calendar_api.update_event(
-                jitsi.calendar, event_id, lesson
-            )
+            event = await self.calendar_api.update_event(jitsi.calendar, event_id, lesson)
             lesson["gcalendar_event_id"] = event["id"]
             lesson["gcalendar_calendar_id"] = jitsi.calendar
             await self.nvr_api.update_lesson(lesson_id, lesson)
@@ -119,11 +103,9 @@ class CalendarManager:
             lesson_id = check_data[1]
             event_id = check_data[2]
             await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
-            # time.sleep(0.6)
+            time.sleep(0.6)
 
-    async def synchronize_lessons_in_room(
-        self, room_id: str, offline_rooms: list, room_name: str
-    ):
+    async def synchronize_lessons_in_room(self, room_id: str, offline_rooms: list, room_name: str):
         lessons = await self.get_lessons_from_room(room_id)
 
         if lessons:
@@ -141,8 +123,7 @@ class CalendarManager:
                 chunk = lessons[i : i + 10]
 
                 tasks = [
-                    self.synchronize_lesson(room_id, lesson, offline_rooms)
-                    for lesson in chunk
+                    self.synchronize_lesson(room_id, lesson, offline_rooms) for lesson in chunk
                 ]
                 await asyncio.gather(*tasks)
 
@@ -152,9 +133,7 @@ class CalendarManager:
         rooms = await self.ruz_api.get_auditoriumoid()
 
         tasks = [
-            self.synchronize_lessons_in_room(
-                room["auditoriumOid"], offline_rooms, room["number"]
-            )
+            self.synchronize_lessons_in_room(room["auditoriumOid"], offline_rooms, room["number"])
             for room in rooms
         ]
 
@@ -191,9 +170,7 @@ class CalendarManager:
         if start_date != end_date:
             return
 
-        creator = (
-            self.session.query(User).filter_by(email=event["creator"]["email"]).first()
-        )
+        creator = self.session.query(User).filter_by(email=event["creator"]["email"]).first()
         if not creator:
             return
 
