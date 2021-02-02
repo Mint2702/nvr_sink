@@ -81,7 +81,7 @@ class RuzApi:
                 if grp_emails != []:
                     lesson["grp_emails"] = grp_emails
                 else:
-                    logger.warning(f"Stream: {stream} has no groups. {lesson}")
+                    logger.warning(f"Stream: {stream} has no groups")
             else:
                 stream = ""
             lesson["course_code"] = stream

@@ -1,6 +1,8 @@
 from aiohttp import ClientSession
 from loguru import logger
 import time
+from datetime import datetime
+import pytz
 
 from ..settings import settings
 from ..utils import semlock, NVR
@@ -12,6 +14,10 @@ class Nvr_Api:
     NVR_API_KEY = settings.nvr_api_key
     SERVICE = NVR
     calendar = GCalendar()
+
+    def __init__(self) -> None:
+        tzmoscow = pytz.timezone('Europe/Moscow')
+        self.dt: str = datetime.now().replace(microsecond=0, tzinfo=tzmoscow).isoformat() 
 
     @semlock
     async def get_course_emails(self, course_code: str):
@@ -102,7 +108,7 @@ class Nvr_Api:
         async with ClientSession() as session:
             res = await session.get(
                 f"{self.NVR_API_URL}/lessons",
-                params={"ruz_lesson_oid": ruz_lesson_oid},
+                params={"ruz_lesson_oid": ruz_lesson_oid, 'fromdate': self.dt},
             )
             async with res:
                 data = await res.json()
@@ -120,7 +126,7 @@ class Nvr_Api:
         async with ClientSession() as session:
             res = await session.get(
                 f"{self.NVR_API_URL}/lessons",
-                params={"ruz_auditorium_oid": ruz_auditorium_oid},
+                params={"ruz_auditorium_oid": ruz_auditorium_oid, 'fromdate': self.dt},
             )
             async with res:
                 lessons = await res.json()
