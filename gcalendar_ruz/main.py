@@ -17,11 +17,16 @@ class CalendarManager:
         self.nvr_api = Nvr_Api()
         self.calendar_api = GCalendar()
 
+        self.ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
+        self.jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
+
     def __del__(self):
         self.session.close()
 
     async def test_post_lesson(self, lesson: dict):
         """ Post a lesson with empty event_id """
+
+        lesson = dict(lesson) # make copy
 
         lesson["gcalendar_event_id"] = ""
         lesson["gcalendar_calendar_id"] = ""
@@ -33,7 +38,7 @@ class CalendarManager:
     async def post_lesson(self, lesson: dict, lesson_id: str, calendar_id: str):
         """ Posts event to Google calendar and updates lesson in Erudite """
 
-        event = await self.calendar_api.create_event(ruz.calendar, lesson)
+        event = await self.calendar_api.create_event(self.ruz.calendar, lesson)
         lesson["gcalendar_event_id"] = event["id"]
         lesson["gcalendar_calendar_id"] = calendar_id
         await self.nvr_api.update_lesson(lesson_id, lesson)
@@ -49,7 +54,7 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201:
-                event = await self.post_lesson(lesson, erudite_lesson["id"], ruz.calendar)
+                event = await self.post_lesson(lesson, erudite_lesson["id"], self.ruz.calendar)
                 time.sleep(0.6)
 
             if lesson["ruz_auditorium"] in offline_rooms:
@@ -62,16 +67,16 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201:
-                event = await self.post_lesson(lesson, erudite_lesson["id"], jitsi.calendar)
+                event = await self.post_lesson(lesson, erudite_lesson["id"], self.jitsi.calendar)
 
     async def update_lesson(self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str):
         """ Updates lesson in Erudite and Google Calendar """
 
         if lesson["ruz_url"] is None or "meet.miem.hse.ru" not in lesson["ruz_url"]:
             logger.info("Updating ruz lesson")
-            event = await self.calendar_api.update_event(ruz.calendar, event_id, lesson)
+            event = await self.calendar_api.update_event(self.ruz.calendar, event_id, lesson)
             lesson["gcalendar_event_id"] = event["id"]
-            lesson["gcalendar_calendar_id"] = ruz.calendar
+            lesson["gcalendar_calendar_id"] = self.ruz.calendar
             await self.nvr_api.update_lesson(lesson_id, lesson)
 
             if lesson["ruz_auditorium"] in offline_rooms:
@@ -80,9 +85,9 @@ class CalendarManager:
 
         elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
             logger.info("Updating jitsi lesson")
-            event = await self.calendar_api.update_event(jitsi.calendar, event_id, lesson)
+            event = await self.calendar_api.update_event(self.jitsi.calendar, event_id, lesson)
             lesson["gcalendar_event_id"] = event["id"]
-            lesson["gcalendar_calendar_id"] = jitsi.calendar
+            lesson["gcalendar_calendar_id"] = self.jitsi.calendar
             await self.nvr_api.update_lesson(lesson_id, lesson)
 
     async def synchronize_lesson(
@@ -154,14 +159,7 @@ class CalendarManager:
 
         return lessons
 
-    def get_online_rooms(self):
-        """ Get online rooms from DB """
 
-        global ruz
-        global jitsi
-
-        ruz = self.session.query(OnlineRoom).filter_by(name="РУЗ").first()
-        jitsi = self.session.query(OnlineRoom).filter_by(name="Jitsi").first()
 
     def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -186,18 +184,18 @@ class CalendarManager:
 
     async def delete_online_events(self):
         while True:
-            events = await self.calendar_api.get_events(jitsi.calendar)
+            events = await self.calendar_api.get_events(self.jitsi.calendar)
             if len(events) == 0:
                 break
             for event in events:
-                await self.calendar_api.delete_event(jitsi.calendar, event["id"])
+                await self.calendar_api.delete_event(self.jitsi.calendar, event["id"])
 
         while True:
-            events = await self.calendar_api.get_events(ruz.calendar)
+            events = await self.calendar_api.get_events(self.ruz.calendar)
             if len(events) == 0:
                 break
             for event in events:
-                await self.calendar_api.delete_event(ruz.calendar, event["id"])
+                await self.calendar_api.delete_event(self.ruz.calendar, event["id"])
 
 
 @logger.catch
@@ -205,9 +203,7 @@ async def main():
     await redis_connect()
     manager = CalendarManager()
 
-    manager.get_online_rooms()
-
-    await asyncio.gather(manager.get_rooms())
+    await manager.get_rooms()
 
 
 if __name__ == "__main__":
