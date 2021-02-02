@@ -53,7 +53,7 @@ class CalendarManager:
             data = await self.test_post_lesson(lesson)
             code = data[0]
             erudite_lesson = data[1]
-            if code == 201:
+            if code == 201 or code == 409:
                 event = await self.post_lesson(lesson, erudite_lesson["id"], self.ruz.calendar)
                 time.sleep(0.6)
 
@@ -66,7 +66,7 @@ class CalendarManager:
             data = await self.test_post_lesson(lesson)
             code = data[0]
             erudite_lesson = data[1]
-            if code == 201:
+            if code == 201 or code == 409:
                 event = await self.post_lesson(lesson, erudite_lesson["id"], self.jitsi.calendar)
 
     async def update_lesson(self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str):
@@ -79,9 +79,9 @@ class CalendarManager:
             lesson["gcalendar_calendar_id"] = self.ruz.calendar
             await self.nvr_api.update_lesson(lesson_id, lesson)
 
-            if lesson["ruz_auditorium"] in offline_rooms:
-                room = self.session.query(Room).filter_by(name=lesson["ruz_auditorium"]).first()
-                self.create_record(room, event)
+            # if lesson["ruz_auditorium"] in offline_rooms:
+            #     room = self.session.query(Room).filter_by(name=lesson["ruz_auditorium"]).first()
+            #     self.create_record(room, event)
 
         elif lesson["ruz_url"] is not None and "meet.miem.hse.ru" in lesson["ruz_url"]:
             logger.info("Updating jitsi lesson")

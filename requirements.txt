@@ -9,3 +9,4 @@ aredis
 pydantic
 aiohttp
 loguru
+pytz
