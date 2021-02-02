@@ -1,6 +1,8 @@
 from aiohttp import ClientSession
 from datetime import datetime, timedelta
 
+from loguru import logger
+
 from .nvr_api import Nvr_Api
 from ..utils import camel_to_snake
 from ..redis_caching.caching import cache
@@ -76,8 +78,10 @@ class RuzApi:
             if lesson["ruz_group"] is not None:
                 stream = lesson["ruz_group"].split("#")[0]
                 grp_emails = await self.nvr_api.get_course_emails(stream)
-                if grp_emails is not None:
+                if grp_emails != []:
                     lesson["grp_emails"] = grp_emails
+                else:
+                    logger.warning(f"Stream: {stream} has no groups. {lesson}")
             else:
                 stream = ""
             lesson["course_code"] = stream

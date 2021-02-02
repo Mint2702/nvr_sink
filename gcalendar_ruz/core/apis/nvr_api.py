@@ -30,10 +30,10 @@ class Nvr_Api:
         if res.status == 200:
             grp_emails = data[0].get("emails")
         else:
-            return None
+            return []
 
         if grp_emails == [""]:
-            return None
+            return []
 
         return grp_emails
 
