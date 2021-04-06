@@ -41,15 +41,12 @@ class Room(Base, CommonMixin):
 
     drive = Column(String(200))
     calendar = Column(String(200))
-    stream_url = Column(String(300))
 
     sound_source = Column(String(100))
     main_source = Column(String(100))
-    tracking_source = Column(String(100))
     screen_source = Column(String(100))
 
     auto_control = Column(Boolean, default=True)
-    tracking_state = Column(Boolean, default=False)
 
     records = relationship("Record", back_populates="room")
     sources = relationship("Source", backref="room", lazy=False)
@@ -65,7 +62,6 @@ class Source(Base):
     rtsp = Column(String(200), default="no")
     audio = Column(String(200))
     merge = Column(String(200))
-    tracking = Column(String(200))
     room_id = Column(Integer, ForeignKey("rooms.id"))
 
 
