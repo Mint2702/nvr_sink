@@ -8,6 +8,7 @@ from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 from core.apis.nvr_api import Nvr_Api
 from core.redis_caching.caching import redis_connect
+from core.utils import alert
 
 
 class CalendarManager:
@@ -23,27 +24,74 @@ class CalendarManager:
     def __del__(self):
         self.session.close()
 
-    async def test_post_lesson(self, lesson: dict):
-        """ Post a lesson with empty event_id """
+    async def get_rooms(self):
+        offline_rooms = [room.name for room in self.session.query(Room).all()]
 
-        lesson = dict(lesson) # make copy
+        rooms = await self.ruz_api.get_auditoriumoid()
 
-        lesson["gcalendar_event_id"] = ""
-        lesson["gcalendar_calendar_id"] = ""
+        tasks = [
+            self.synchronize_lessons_in_room(room["auditoriumOid"], offline_rooms, room["number"])
+            for room in rooms
+        ]
 
-        data = await self.nvr_api.add_lesson(lesson)
+        await asyncio.gather(*tasks)
 
-        return data
+        logger.info(
+            f"Created events for {datetime.today().date() + timedelta(days=1)} - {datetime.today().date() + timedelta(days=self.ruz_api.period)}"
+        )
 
-    async def post_lesson(self, lesson: dict, lesson_id: str, calendar_id: str):
-        """ Posts event to Google calendar and updates lesson in Erudite """
+    async def synchronize_lessons_in_room(self, room_id: str, offline_rooms: list, room_name: str):
+        lessons = await self.get_lessons_from_room(room_id)
 
-        event = await self.calendar_api.create_event(self.ruz.calendar, lesson)
-        lesson["gcalendar_event_id"] = event["id"]
-        lesson["gcalendar_calendar_id"] = calendar_id
-        await self.nvr_api.update_lesson(lesson_id, lesson)
+        if lessons:
+            logger.info(
+                f"""
+                Successfully got lessons for room {room_name}
+                Synchronizing lessons in calendar and Erudite
+                """
+            )
+            # Deletes lessons from Erudite if it doesn't exist in Ruz
+            await self.nvr_api.check_delete_Erudite_lessons(lessons, room_id)
+            time.sleep(0.2)
 
-        return event
+            for i in range(0, len(lessons), 10):
+                chunk = lessons[i : i + 10]
+
+                tasks = [
+                    self.synchronize_lesson(room_id, lesson, offline_rooms) for lesson in chunk
+                ]
+                await asyncio.gather(*tasks)
+
+    async def get_lessons_from_room(self, room_id: str) -> list:
+        """ Get lessons in room from ruz """
+
+        try:
+            lessons = await self.ruz_api.get_lessons(room_id)
+        except Exception as err:
+            lessons = None
+            logger.error(err)
+
+        return lessons
+
+    async def synchronize_lesson(
+        self,
+        room_id: str,
+        lesson: dict,
+        offline_rooms: list,
+    ):
+        check_data = await self.nvr_api.check_lesson(lesson)
+        status = check_data[0]
+
+        # Lesson not found in Erudite, so we add it
+        if status == "Not found":
+            await self.add_lesson(lesson, offline_rooms)
+
+        # Lesson found in Erudite, but the data of this lesson has to be updated
+        elif status == "Update":
+            lesson_id = check_data[1]
+            event_id = check_data[2]
+            await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
+            time.sleep(0.6)
 
     async def add_lesson(self, lesson: dict, offline_rooms: list):
         """ Adds lesson to Erudite and Google Calendar """
@@ -90,76 +138,27 @@ class CalendarManager:
             lesson["gcalendar_calendar_id"] = self.jitsi.calendar
             await self.nvr_api.update_lesson(lesson_id, lesson)
 
-    async def synchronize_lesson(
-        self,
-        room_id: str,
-        lesson: dict,
-        offline_rooms: list,
-    ):
-        check_data = await self.nvr_api.check_lesson(lesson)
-        status = check_data[0]
+    async def test_post_lesson(self, lesson: dict):
+        """ Post a lesson with empty event_id """
 
-        # Lesson not found in Erudite, so we add it
-        if status == "Not found":
-            await self.add_lesson(lesson, offline_rooms)
+        lesson = dict(lesson)  # make copy
 
-        # Lesson found in Erudite, but the data of this lesson has to be updated
-        elif status == "Update":
-            lesson_id = check_data[1]
-            event_id = check_data[2]
-            await self.update_lesson(lesson, offline_rooms, lesson_id, event_id)
-            time.sleep(0.6)
+        lesson["gcalendar_event_id"] = ""
+        lesson["gcalendar_calendar_id"] = ""
 
-    async def synchronize_lessons_in_room(self, room_id: str, offline_rooms: list, room_name: str):
-        lessons = await self.get_lessons_from_room(room_id)
+        data = await self.nvr_api.add_lesson(lesson)
 
-        if lessons:
-            logger.info(
-                f"""
-                Successfully got lessons for room {room_name}
-                Synchronizing lessons in calendar and Erudite
-                """
-            )
-            # Deletes lessons from Erudite if it doesn't exist in Ruz
-            await self.nvr_api.check_delete_Erudite_lessons(lessons, room_id)
-            time.sleep(0.2)
+        return data
 
-            for i in range(0, len(lessons), 10):
-                chunk = lessons[i : i + 10]
+    async def post_lesson(self, lesson: dict, lesson_id: str, calendar_id: str):
+        """ Posts event to Google calendar and updates lesson in Erudite """
 
-                tasks = [
-                    self.synchronize_lesson(room_id, lesson, offline_rooms) for lesson in chunk
-                ]
-                await asyncio.gather(*tasks)
+        event = await self.calendar_api.create_event(self.ruz.calendar, lesson)
+        lesson["gcalendar_event_id"] = event["id"]
+        lesson["gcalendar_calendar_id"] = calendar_id
+        await self.nvr_api.update_lesson(lesson_id, lesson)
 
-    async def get_rooms(self):
-        offline_rooms = [room.name for room in self.session.query(Room).all()]
-
-        rooms = await self.ruz_api.get_auditoriumoid()
-
-        tasks = [
-            self.synchronize_lessons_in_room(room["auditoriumOid"], offline_rooms, room["number"])
-            for room in rooms
-        ]
-
-        await asyncio.gather(*tasks)
-
-        logger.info(
-            f"Created events for {datetime.today().date() + timedelta(days=1)} - {datetime.today().date() + timedelta(days=self.ruz_api.period)}"
-        )
-
-    async def get_lessons_from_room(self, room_id: str) -> list:
-        """ Get lessons in room from ruz """
-
-        try:
-            lessons = await self.ruz_api.get_lessons(room_id)
-        except Exception as err:
-            lessons = None
-            logger.error(err)
-
-        return lessons
-
-
+        return event
 
     def create_record(self, room: Room, event: dict):
         start_date = event["start"]["dateTime"].split("T")[0]
@@ -199,6 +198,7 @@ class CalendarManager:
 
 
 @logger.catch
+@alert("dimirtalibov@miem.hse.ru")
 async def main():
     await redis_connect()
     manager = CalendarManager()

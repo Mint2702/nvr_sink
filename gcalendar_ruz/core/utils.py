@@ -4,6 +4,9 @@ import asyncio
 from loguru import logger
 import time
 import sys
+import smtplib
+
+from .settings import settings
 
 
 GOOGLE = "google"
@@ -83,3 +86,25 @@ def handle_google_errors(func):
             return result
 
     return wrapper
+
+
+def alert(mail: str):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                result = await func(*args, **kwargs)
+            except Exception as error:
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login(mail, settings.gmail_password)
+                logger.info("Login success")
+                message = f"Gcalendar_ruz has an error - {error}"
+                server.sendmail(mail, mail, message)
+                logger.info("Email sent!")
+                server.close()
+                raise Exception
+
+        return wrapper
+
+    return decorator
