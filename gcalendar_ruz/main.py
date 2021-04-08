@@ -8,7 +8,7 @@ from core.apis.calendar_api import GCalendar
 from core.db.models import Session, Room, OnlineRoom, Record, UserRecord, User
 from core.apis.nvr_api import Nvr_Api
 from core.redis_caching.caching import redis_connect
-from core.utils import alert
+from core.gmail import alert_async
 
 
 class CalendarManager:
@@ -102,8 +102,11 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201 or code == 409:
-                event = await self.post_lesson(lesson, erudite_lesson["id"], self.ruz.calendar)
-                time.sleep(0.6)
+                try:
+                    event = await self.post_lesson(lesson, erudite_lesson["id"], self.ruz.calendar)
+                    time.sleep(0.6)
+                except:
+                    logger.warning(f"Erudite returned - {erudite_lesson}")
 
             if lesson["ruz_auditorium"] in offline_rooms:
                 room = self.session.query(Room).filter_by(name=lesson["ruz_auditorium"]).first()
@@ -115,7 +118,12 @@ class CalendarManager:
             code = data[0]
             erudite_lesson = data[1]
             if code == 201 or code == 409:
-                event = await self.post_lesson(lesson, erudite_lesson["id"], self.jitsi.calendar)
+                try:
+                    event = await self.post_lesson(
+                        lesson, erudite_lesson["id"], self.jitsi.calendar
+                    )
+                except:
+                    logger.warning(f"Erudite returned - {erudite_lesson}")
 
     async def update_lesson(self, lesson: dict, offline_rooms: list, lesson_id: str, event_id: str):
         """ Updates lesson in Erudite and Google Calendar """
@@ -198,7 +206,7 @@ class CalendarManager:
 
 
 @logger.catch
-@alert("dimirtalibov@miem.hse.ru")
+@alert_async
 async def main():
     await redis_connect()
     manager = CalendarManager()

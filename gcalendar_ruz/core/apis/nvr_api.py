@@ -16,8 +16,10 @@ class Nvr_Api:
     calendar = GCalendar()
 
     def __init__(self) -> None:
-        tzmoscow = pytz.timezone('Europe/Moscow')
-        self.dt: str = datetime.now().replace(microsecond=0, tzinfo=tzmoscow).isoformat() 
+        tzmoscow = pytz.timezone("Europe/Moscow")
+        self.dt: str = (
+            datetime.now().replace(microsecond=0, tzinfo=tzmoscow).isoformat()
+        )
 
     @semlock
     async def get_course_emails(self, course_code: str):
@@ -108,7 +110,7 @@ class Nvr_Api:
         async with ClientSession() as session:
             res = await session.get(
                 f"{self.NVR_API_URL}/lessons",
-                params={"ruz_lesson_oid": ruz_lesson_oid, 'fromdate': self.dt},
+                params={"ruz_lesson_oid": ruz_lesson_oid, "fromdate": self.dt},
             )
             async with res:
                 data = await res.json()
@@ -126,7 +128,7 @@ class Nvr_Api:
         async with ClientSession() as session:
             res = await session.get(
                 f"{self.NVR_API_URL}/lessons",
-                params={"ruz_auditorium_oid": ruz_auditorium_oid, 'fromdate': self.dt},
+                params={"ruz_auditorium_oid": ruz_auditorium_oid, "fromdate": self.dt},
             )
             async with res:
                 lessons = await res.json()
