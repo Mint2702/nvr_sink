@@ -10,4 +10,3 @@ pydantic
 aiohttp
 loguru
 pytz
-smtplib
