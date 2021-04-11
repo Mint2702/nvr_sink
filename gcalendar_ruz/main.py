@@ -101,6 +101,7 @@ class CalendarManager:
             data = await self.test_post_lesson(lesson)
             code = data[0]
             erudite_lesson = data[1]
+            event = None
             if code == 201 or code == 409:
                 try:
                     event = await self.post_lesson(lesson, erudite_lesson["id"], self.ruz.calendar)
