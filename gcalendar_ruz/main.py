@@ -220,6 +220,8 @@ async def main():
 
     await manager.get_rooms()
 
+    logger.info("Finished!!!")
+
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
