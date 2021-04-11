@@ -107,7 +107,10 @@ class GCalendar:
                 headers=self.HEADERS,
             )
             async with res:
-                res = await res.json(content_type=None)
+                try:
+                    res = await res.json()
+                except:
+                    print(res)
 
         if res is None:
             logger.info("Event deleted from Google Calendar")
@@ -130,11 +133,14 @@ class GCalendar:
                 headers=self.HEADERS,
             )
             async with res:
-                print(await res.text())
-                data = await res.json()
+                try:
+                    res = await res.json()
+                except:
+                    logger.info(f"Update event returned code - {res.status}.")
+                    return res
 
-        logger.info(f"Update event returned code - {data.get('status')}.")
-        return data
+        logger.info(f"Update event returned code - {res.get('status')}.")
+        return res
 
     @token_check
     async def get_events(self, calendar_id: str) -> dict:
