@@ -114,7 +114,6 @@ class User(Base, CommonMixin):
 
     email = Column(String(120), unique=True, nullable=False)
     password = Column(String(255), default=None)
-    role = Column(String(50), default="user")
     email_verified = Column(Boolean, default=False)
     access = Column(Boolean, default=False)
     api_key = Column(String(255), unique=True)
