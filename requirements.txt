@@ -10,3 +10,4 @@ pydantic
 aiohttp
 loguru
 pytz
+pydantic[dotenv]

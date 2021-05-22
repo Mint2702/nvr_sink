@@ -8,5 +8,5 @@ venv/
 logs/
 *.iml
 .idea
-.env
+*env*
 creds/
