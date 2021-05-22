@@ -36,3 +36,25 @@ class Erudite:
         else:
             logger.info("Lesson not found")
             return []
+
+    @semlock
+    async def get_course_emails(self, course_code: str):
+        """ Gets emails from a GET responce from Erudite """
+
+        async with ClientSession() as session:
+            res = await session.get(
+                f"{self.NVR_API_URL}/disciplines",
+                params={"course_code": course_code},
+            )
+            async with res:
+                data = await res.json()
+
+        if res.status == 200:
+            grp_emails = data[0].get("emails")
+        else:
+            return []
+
+        if grp_emails == [""]:
+            return []
+
+        return grp_emails
