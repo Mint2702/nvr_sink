@@ -1,5 +1,6 @@
 from aiohttp import ClientSession
 from datetime import datetime, timedelta
+import json
 
 from loguru import logger
 
@@ -16,8 +17,8 @@ class RuzApi:
 
     # building id МИЭМа = 92
     @semlock
-    async def get_miem_rooms(self, building_id: int = 92) -> list:
-        """ Gets rooms in MIEM """
+    async def get_rooms(self, building_id: int = 92) -> list:
+        """ Gets rooms (by default in MIEM) """
 
         async with ClientSession() as session:
             res = await session.get(f"{self.url}/auditoriums?buildingoid=0")
@@ -42,26 +43,37 @@ class RuzApi:
         needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
             "%Y.%m.%d"
         )
-        today = datetime.today().strftime("%Y.%m.%d")
+        #today = datetime.today().strftime("%Y.%m.%d")
+
+        today = (datetime.today() - timedelta(days=40)).strftime(
+            "%Y.%m.%d"
+        )
 
         params = dict(
             fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id)
         )
 
-        raw_lessons = await self._get_lessons_in_room_raw(params)
-        lessons = self._parce_lessons(raw_lessons)
+        lessons = await self._request_lessons_in_room(params)
 
         return lessons
 
-    async def _get_lessons_in_room_raw(self, params: str) -> dict:
+    async def _request_lessons_in_room(self, params: str) -> dict:
         """ Gets lessons from RUZ by given parameters """
 
         async with ClientSession() as session:
-            res = await session.get(f"{self.url}/lessons", params=params)
-            async with res:
-                res = await res.json(content_type=None)
+            result_raw = await session.get(f"{self.url}/lessons", params=params)
+            async with result_raw:
+                result_text = await result_raw.text()
 
-        return res
+        try:
+            lessons = json.loads(result_text)
+        except Exception:
+            logger.error(
+                "Data about lessons in room could not be converted to json format"
+            )
+            lessons = []
+
+        return lessons
 
     def _parce_lessons(self, lessons_raw: list) -> list:
         """ Parses lessons that were returned from RUZ to the Erudite needed format """
