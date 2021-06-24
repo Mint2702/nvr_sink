@@ -4,6 +4,7 @@ import asyncio
 from loguru import logger
 import time
 import sys
+from aiohttp import client_exceptions
 
 
 GOOGLE = "google"
@@ -36,50 +37,18 @@ def semlock(func):
     return wrapper
 
 
-def token_check(func):
+def handle_ruz_error(func):
     @wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        if not self.creds or self.creds.expired:
-            logger.info("Refresh google tokens")
-            self.refresh_token()
-
-        self.HEADERS = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.creds.token}",
-        }
-
-        return await func(self, *args, **kwargs)
-
-    return wrapper
-
-
-def handle_google_errors(func):
-    @wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        result = await func(self, *args, **kwargs)
+    async def wrapper(self, *args, recursion_depth=0, **kwargs):
         try:
-            error = result["error"]
-        except Exception:
-            error = None
+            result = await func(self, *args, **kwargs)
             return result
-
-        if error:
-            try:
-                error_reason = error["errors"][0]["reason"]
-            except Exception:
-                error_reason = None
-
-            if error_reason == "rateLimitExceeded":
-                logger.error("Rate limit for google exceeded")
-                time.sleep(11)
-                return await wrapper(self, *args, **kwargs)
-            elif error_reason == "quotaExceeded":
-                logger.error("Usage limit for google exceeded")
-                sys.exit(1)
-            else:
-                logger.error(f"Other reason  -  {result}")
-
-        else:
-            return result
+        except client_exceptions.ClientOSError or client_exceptions.ServerDisconnectedError:
+            sleep_time = 10 + 5 * recursion_depth
+            logger.error(f"Ruz exception. Sleeping for {sleep_time} sec...")
+            time.sleep(sleep_time)
+            return await wrapper(
+                self, *args, recursion_depth=recursion_depth + 1, **kwargs
+            )
 
     return wrapper

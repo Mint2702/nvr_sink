@@ -1,5 +1,21 @@
+from loguru import logger
+from copy import deepcopy
+
+from ..utils import camel_to_snake
+
+
 class Lesson:
-    def __init__(self, lesson_attributes: dict) -> None:
+    def __init__(self, lesson_attributes: dict, source: str = "ruz") -> None:
+        """ Converts given dictionary of lesson's attributes to the Lesson's fields, depending on the source of data about lesson """
+
+        if source == "ruz":
+            self.ruz_convertation(lesson_attributes)
+        else:
+            logger.error("Source not supported")
+
+    def ruz_convertation(self, lesson_attributes: dict) -> None:
+        """ Converts given list of lesson's attributes to the Lesson's fields """
+
         self.raw: dict = lesson_attributes
 
         date = lesson_attributes["date"].split(".")
@@ -14,6 +30,8 @@ class Lesson:
         )
 
         self.url = lesson_attributes["url1"]
+
+        self.grp_emails = None
 
         if not lesson_attributes["group"]:
             self.course_code = None
@@ -33,6 +51,39 @@ class Lesson:
             self.miem_lecturer_email: str = (
                 lesson_attributes["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
             )
+
+    def to_json(self) -> dict:
+        """ Converts data, stored in the object to dict """
+
+        lesson = {}
+        raw_lesson = deepcopy(self.raw)
+
+        raw_lesson.pop("date")
+        lesson["date"] = self.date
+
+        lesson["start_time"] = raw_lesson.pop("beginLesson")
+        lesson["end_time"] = raw_lesson.pop("endLesson")
+
+        lesson["summary"] = raw_lesson["discipline"]
+        lesson["location"] = self.location
+
+        for key in raw_lesson:
+            new_key = f"ruz_{camel_to_snake(key)}"
+            lesson[new_key] = raw_lesson[key]
+
+        lesson["ruz_url"] = lesson["ruz_url1"]
+
+        lesson["course_code"] = self.course_code
+
+        if self.grp_emails:
+            lesson["grp_emails"] = self.grp_emails
+
+        lesson["description"] = self.description
+
+        if lesson.get("ruz_lecturer_email"):  # None or ""
+            lesson["miem_lecturer_email"] = self.miem_lecturer_email
+
+        return lesson
 
 
 class Room:

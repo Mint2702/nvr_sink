@@ -4,7 +4,7 @@ import json
 
 from loguru import logger
 
-from ..utils import camel_to_snake, semlock, RUZ
+from ..utils import camel_to_snake, semlock, RUZ, handle_ruz_error
 from ..settings import settings
 
 
@@ -17,6 +17,7 @@ class RuzApi:
 
     # building id МИЭМа = 92
     @semlock
+    @handle_ruz_error
     async def get_rooms(self, building_id: int = 92) -> list:
         """ Gets rooms (by default in MIEM) """
 
@@ -53,6 +54,7 @@ class RuzApi:
         return lessons
 
     @semlock
+    @handle_ruz_error
     async def _request_lessons_in_room(self, params: str) -> dict:
         """ Gets lessons from RUZ by given parameters """
 
@@ -68,52 +70,5 @@ class RuzApi:
                 "Data about lessons in room could not be converted to json format"
             )
             lessons = []
-
-        return lessons
-
-    def _parce_lessons(self, lessons_raw: list) -> list:
-        """ Parses lessons that were returned from RUZ to the Erudite needed format """
-
-        lessons = []
-        for class_ in lessons_raw:
-            lesson = {}
-
-            date = class_.pop("date")
-            date = date.split(".")
-            lesson["date"] = "-".join(date)
-
-            lesson["start_time"] = class_.pop("beginLesson")
-            lesson["end_time"] = class_.pop("endLesson")
-
-            lesson["summary"] = class_["discipline"]
-            lesson["location"] = f"{class_['auditorium']}/{class_['building']}"
-
-            for key in class_:
-                new_key = f"ruz_{camel_to_snake(key)}"
-                lesson[new_key] = class_[key]
-
-            lesson["ruz_url"] = lesson["ruz_url1"]
-
-            if lesson["ruz_group"] is not None:
-                stream = lesson["ruz_group"].split("#")[0]
-            else:
-                stream = ""
-            lesson["course_code"] = stream
-
-            lesson["description"] = (
-                f"Поток: {stream}\n"
-                f"Преподаватель: {lesson['ruz_lecturer']}\n"
-                f"Тип занятия: {lesson['ruz_kind_of_work']}\n"
-            )
-
-            if lesson["ruz_url"]:
-                lesson["description"] += f"URL: {lesson['ruz_url']}\n"
-
-            if lesson.get("ruz_lecturer_email"):  # None or ""
-                lesson["miem_lecturer_email"] = (
-                    lesson["ruz_lecturer_email"].split("@")[0] + "@miem.hse.ru"
-                )
-
-            lessons.append(lesson)
 
         return lessons

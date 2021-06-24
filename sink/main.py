@@ -13,6 +13,14 @@ class CalendarManager:
         self.ruz_api = RuzApi()
         self.erudite = Erudite()
 
+        # Statistics
+        self.lessons_with_no_group = 0
+        self.lessons_with_group = 0
+        self.lessons_with_no_course_code = 0
+        self.lessons_added = 0
+        self.lessons_updated = 0
+        self.lessons_deleted = 0
+
     async def get_rooms(self):
         """ Gets rooms in specified building """
 
@@ -24,32 +32,61 @@ class CalendarManager:
 
         rooms = [Room(room) for room in rooms]
         for room in rooms:
-            await self.get_lessons_in_room(room)
+            await self.synchronize_lessons_in_room(room)
 
-    async def get_lessons_in_room(self, room: Room) -> list:
+        # Тут можно добавить подсчет пар, которые не удалось синхронизмровать, сколько пар было изменено, добавлено, удалено и тд
+
+    async def synchronize_lessons_in_room(self, room: Room) -> list:
+        """ Synchronization of lessons in the room for a period of time, specified in .env file """
+
+        ruz_lessons = await self.get_lessons_in_room(room.ruz_room_id)
+
+        await self.add_group_email_to_lessons(ruz_lessons)
+
+        erudite_lessons = await self.erudite.get_lessons_in_room(room.ruz_room_id)
+
+        print(len(erudite_lessons))
+        for lesson in erudite_lessons:
+            print(lesson)
+
+    async def get_lessons_in_room(self, ruz_room_id: str) -> list:
         """ Gets lessons in specified room and adds email to the lessons """
 
-        lessons_without_emails = await self.ruz_api.get_lessons_in_room(
-            room.ruz_room_id
-        )
+        time.sleep(0.5)
+        lessons = await self.ruz_api.get_lessons_in_room(ruz_room_id)
 
         # Convert lessons in dict to their class format
-        lessons_objects = [Lesson(lesson) for lesson in lessons_without_emails]
+        converted_lessons = [Lesson(lesson) for lesson in lessons]
 
-        for lesson in lessons_objects:
+        return converted_lessons
+
+    async def add_group_email_to_lessons(self, lessons: list) -> None:
+        """ Adds course email for lesson, if it's course code is specified """
+
+        for lesson in lessons:
             if lesson.course_code:
-                await self.add_cource_emails_to_lessons(lesson)
+                await self.add_group_email_to_lesson(lesson)
+            else:
+                # logger.warning("No cource code")
+                self.lessons_with_no_course_code += 1
 
-    async def add_cource_emails_to_lessons(self, lesson: Lesson) -> None:
+    async def add_group_email_to_lesson(self, lesson: Lesson) -> None:
         """ Adds grp_emails(group emails) to lesson """
 
         stream = lesson.course_code
         grp_emails = await self.erudite.get_course_emails(stream)
         if len(grp_emails) > 0:
             lesson.grp_emails = grp_emails
-            logger.info(f"Good - {lesson.grp_emails}")
+            # logger.info(f"Good - {lesson.grp_emails}")
+            self.lessons_with_group += 1
         else:
-            logger.warning(f"Stream: {stream} has no groups")
+            # logger.info(f"Stream: {stream} has no groups")
+            self.lessons_with_no_group += 1
+
+    def statistics(self) -> None:
+        logger.info(
+            f"\nLessons without course code - {self.lessons_with_no_course_code}\nLessons without group - {self.lessons_with_no_group}\nLessons with group - {self.lessons_with_group}\nLessons added - {self.lessons_added}\nLessons updated - {self.lessons_updated}\nLessons deleted - {self.lessons_deleted}"
+        )
 
 
 @logger.catch
@@ -60,6 +97,7 @@ async def main():
     status = await manager.start_synchronization(rooms)
 
     logger.info("Finished!!!")
+    manager.statistics()
 
 
 if __name__ == "__main__":

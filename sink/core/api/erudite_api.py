@@ -34,7 +34,7 @@ class Erudite:
         if res.status == 200:
             return lessons
         else:
-            logger.info("Lesson not found")
+            # logger.info("Lessons not found")
             return []
 
     @semlock
