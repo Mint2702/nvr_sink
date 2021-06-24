@@ -20,10 +20,11 @@ class CalendarManager:
         return rooms
 
     async def start_synchronization(self, rooms: list) -> bool:
-        """ Start point of synchronization """
+        """ Start point of synchronization. Ruz does not allow to work with it asynchroniously, so all work done synchroniousily. """
 
-        tasks = [self.get_lessons_in_room(Room(room)) for room in rooms]
-        await asyncio.gather(*tasks)
+        rooms = [Room(room) for room in rooms]
+        for room in rooms:
+            await self.get_lessons_in_room(room)
 
     async def get_lessons_in_room(self, room: Room) -> list:
         """ Gets lessons in specified room and adds email to the lessons """
@@ -31,25 +32,24 @@ class CalendarManager:
         lessons_without_emails = await self.ruz_api.get_lessons_in_room(
             room.ruz_room_id
         )
-        for lesson in lessons_without_emails:
-            lesson_class = Lesson(lesson)
-            print(lesson_class.date)
 
-        # tasks = [self.add_cource_emails_to_lessons(lesson) for lesson in lessons_without_emails]
-        # await asyncio.gather(*tasks)
+        # Convert lessons in dict to their class format
+        lessons_objects = [Lesson(lesson) for lesson in lessons_without_emails]
 
-        # logger.info(lessons_without_emails)
+        for lesson in lessons_objects:
+            if lesson.course_code:
+                await self.add_cource_emails_to_lessons(lesson)
 
-    async def add_cource_emails_to_lessons(self, lesson: list) -> None:
-        """ Adds grp_emails to lessons """
+    async def add_cource_emails_to_lessons(self, lesson: Lesson) -> None:
+        """ Adds grp_emails(group emails) to lesson """
 
-        if lesson["ruz_group"] is not None:
-            stream = lesson["course_code"]
-            grp_emails = await self.erudite.get_course_emails(stream)
-            if grp_emails != []:
-                lesson["grp_emails"] = grp_emails
-            else:
-                logger.warning(f"Stream: {stream} has no groups")
+        stream = lesson.course_code
+        grp_emails = await self.erudite.get_course_emails(stream)
+        if len(grp_emails) > 0:
+            lesson.grp_emails = grp_emails
+            logger.info(f"Good - {lesson.grp_emails}")
+        else:
+            logger.warning(f"Stream: {stream} has no groups")
 
 
 @logger.catch

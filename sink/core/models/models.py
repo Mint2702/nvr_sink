@@ -16,7 +16,7 @@ class Lesson:
         self.url = lesson_attributes["url1"]
 
         if not lesson_attributes["group"]:
-            self.course_code = ""
+            self.course_code = None
         else:
             self.course_code: str = lesson_attributes["group"].split("#")[0]
 

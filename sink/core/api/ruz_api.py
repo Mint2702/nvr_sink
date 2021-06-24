@@ -34,7 +34,6 @@ class RuzApi:
 
         return rooms
 
-    @semlock
     async def get_lessons_in_room(self, ruz_room_id: str) -> list:
         """
         Gets lessons in room for a specified period and converts them into the Erudite needed format
@@ -43,11 +42,7 @@ class RuzApi:
         needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
             "%Y.%m.%d"
         )
-        #today = datetime.today().strftime("%Y.%m.%d")
-
-        today = (datetime.today() - timedelta(days=40)).strftime(
-            "%Y.%m.%d"
-        )
+        today = datetime.today().strftime("%Y.%m.%d")
 
         params = dict(
             fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id)
@@ -57,13 +52,14 @@ class RuzApi:
 
         return lessons
 
+    @semlock
     async def _request_lessons_in_room(self, params: str) -> dict:
         """ Gets lessons from RUZ by given parameters """
 
         async with ClientSession() as session:
             result_raw = await session.get(f"{self.url}/lessons", params=params)
-            async with result_raw:
-                result_text = await result_raw.text()
+            async with result_raw as resp:
+                result_text = await resp.text()
 
         try:
             lessons = json.loads(result_text)

@@ -11,7 +11,7 @@ NVR = "nvr"
 RUZ = "ruz"
 
 sem_dict = {
-    NVR: asyncio.Semaphore(100),
+    NVR: asyncio.Semaphore(50),
     GOOGLE: asyncio.Semaphore(5),
     RUZ: asyncio.Semaphore(10),
 }
