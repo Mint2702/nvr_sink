@@ -55,7 +55,7 @@ class Erudite:
         return grp_emails
 
     @handle_web_errors
-    def get_lesson_by_lessonOid(self, lesson_id: str) -> dict or None:
+    def get_lesson_by_lesson_id(self, lesson_id: str) -> dict or None:
         """ Gets lesson by it's lessonOid """
 
         result_raw = httpx.get(

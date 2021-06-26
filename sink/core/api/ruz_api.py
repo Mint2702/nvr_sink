@@ -4,7 +4,7 @@ import json
 
 from loguru import logger
 
-from ..utils import camel_to_snake, handle_web_errors
+from ..utils import handle_web_errors
 from ..settings import settings
 
 

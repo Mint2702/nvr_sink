@@ -26,12 +26,13 @@ class Lesson:
         self.start_time = lesson_attributes["beginLesson"]
         self.end_time = lesson_attributes["endLesson"]
 
+        self.url = lesson_attributes["url1"]
+
         self.location = (
             f"{lesson_attributes['auditorium']}/{lesson_attributes['building']}"
         )
 
-        self.url = lesson_attributes["url1"]
-
+        # We later fill group email with function
         self.grp_emails = None
 
         if not lesson_attributes["group"]:
@@ -42,8 +43,21 @@ class Lesson:
     def erudite_convertation(self, lesson_attributes: dict) -> None:
         """ Converts given list of lesson's attributes to the Lesson's fields """
 
-        self.id = lesson_attributes["ruz_lesson_oid"]
-        # self.original = lesson_attributes["original"]
+        self.id = lesson_attributes["ruz_lesson_id"]
+        self.original = lesson_attributes["original"]
+
+        self.date = lesson_attributes["date"]
+        self.start_time = lesson_attributes["start_time"]
+        self.end_time = lesson_attributes["end_time"]
+
+        self.location = lesson_attributes["location"]
+        self.url = lesson_attributes["url"]
+
+        grp_emails = lesson_attributes.get("grp_emails")
+        if grp_emails:
+            self.grp_emails = grp_emails
+
+        self.course_code = lesson_attributes["course_code"]
 
     def to_json(self) -> dict:
         """ Converts data, stored in the object to dict """
@@ -51,12 +65,16 @@ class Lesson:
         lesson = {}
         original_lesson = deepcopy(self.original)
 
+        lesson["ruz_lesson_id"] = self.id
+
         lesson["original"] = original_lesson
         original_lesson.pop("date")
         lesson["date"] = self.date
 
         lesson["start_time"] = self.start_time
         lesson["end_time"] = self.end_time
+
+        lesson["url"] = self.url
 
         lesson["location"] = self.location
         lesson["course_code"] = self.course_code
