@@ -1,10 +1,12 @@
 from datetime import timedelta
 from loguru import logger
+import sys
 
 from core.api.ruz_api import RuzApi
 from core.api.erudite_api import Erudite
 from core.models.models import Room, Lesson
 from core.settings import settings
+from core.utils import dict_compare
 
 
 class CalendarManager:
@@ -38,6 +40,7 @@ class CalendarManager:
         """ Synchronization of lessons in the room for a period of time, specified in .env file """
 
         ruz_lessons = self.get_lessons_in_room(room.ruz_room_id)
+        logger.info(f"Num of lessons in this room in RUZ - {len(ruz_lessons)}")
 
         self.add_group_email_to_lessons(ruz_lessons)
 
@@ -46,6 +49,10 @@ class CalendarManager:
             self.synchronize_lesson_from_schedule_service_with_erudite(lesson)
 
         erudite_lessons = self.erudite.get_lessons_in_room(room.ruz_room_id)
+        erudite_lessons = [
+            Lesson(lesson, source="erudite") for lesson in erudite_lessons
+        ]
+        logger.info(f"Num of lessons in this room in Erudite - {len(erudite_lessons)}")
 
         # Deleting lessons
         for lesson in erudite_lessons:
@@ -106,17 +113,24 @@ class CalendarManager:
 
         self.lessons_added += 1
         logger.info(f"Adding lesson with id - {lesson.id}")
-        # Add
+
+        lesson_json = lesson.to_json()
+        if not self.erudite.post_lesson(lesson_json):
+            sys.exit(1)
 
     def update_lesson_if_needed(
         self, erudite_lesson: Lesson, ruz_lesson: Lesson
     ) -> None:
         """ Updates lesson in Erudite using data from the RUZ lesson """
 
-        if erudite_lesson.raw == ruz_lesson.raw:
+        if not dict_compare(erudite_lesson.original, ruz_lesson.original):
             self.lessons_updated += 1
             logger.info(f"Updating lesson with id - {ruz_lesson.id}")
-            # Update
+
+            new_lesson_json = ruz_lesson.to_json()
+            self.erudite.update_lesson(new_lesson_json, erudite_lesson.erudite_id)
+        else:
+            logger.info("Not added")
 
     def synchronize_lesson_from_erudite_with_schedule_service(
         self, erudite_lesson: Lesson, schedule_lessons: list
@@ -132,14 +146,14 @@ class CalendarManager:
 
         self.delete_lesson(erudite_lesson)
 
-    def delete_lesson(self, lesson: Lesson) -> None:
+    def delete_lesson(self, erudite_lesson: Lesson) -> None:
         """ Deletes lesson from Erudite """
 
         self.lessons_deleted += 1
-        logger.info(f"Deleting lesson with id - {lesson.id}")
+        logger.info(f"Deleting lesson with id - {erudite_lesson.id}")
 
-        erutite_id = lesson.original["id"]
-        # Delete by erutite_id
+        erudite_id = erudite_lesson.erudite_id
+        self.erudite.delete_lesson(erudite_id)
 
     def statistics(self) -> None:
         """ Prints out statistics about lessons that were checked during the synchronization process """

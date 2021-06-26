@@ -39,7 +39,7 @@ class RuzApi:
             "%Y.%m.%d"
         )
         # today = datetime.today().strftime("%Y.%m.%d")
-        today = (datetime.today() - timedelta(30)).strftime("%Y.%m.%d")
+        today = (datetime.today() - timedelta(10)).strftime("%Y.%m.%d")
         params = dict(
             fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id)
         )

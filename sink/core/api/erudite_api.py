@@ -9,7 +9,7 @@ from ..utils import handle_web_errors
 
 
 class Erudite:
-    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"  # "http://localhost:8000"
+    NVR_API_URL = "http://localhost:8000"  #  "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
 
     def __init__(self) -> None:
@@ -24,7 +24,7 @@ class Erudite:
 
         result_raw = httpx.get(
             f"{self.NVR_API_URL}/lessons",
-            params={"ruz_auditorium_oid": ruz_auditorium_oid, "fromdate": self.dt},
+            params={"ruz_auditorium_id": ruz_auditorium_oid, "fromdate": self.dt},
         )
         lessons = result_raw.json()
 
@@ -59,11 +59,57 @@ class Erudite:
         """ Gets lesson by it's lessonOid """
 
         result_raw = httpx.get(
-            f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_oid": lesson_id}
+            f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_id": lesson_id}
         )
         lesson = result_raw.json()
 
-        if result_raw.status_code == 200:
-            return lesson
+        if result_raw.status_code == 200 and len(lesson) > 0:
+            return lesson[0]
         else:
             return None
+
+    @handle_web_errors
+    def post_lesson(self, lesson: dict) -> bool:
+        """ Posts lesson to Erudite """
+
+        result_raw = httpx.post(
+            f"{self.NVR_API_URL}/lessons",
+            json=lesson,
+            headers={"key": self.NVR_API_KEY},
+        )
+        if result_raw.status_code == 201:
+            return True
+
+        logger.error(f"Lesson could not be added to Erudite - {result_raw}")
+        print(lesson)
+        return False
+
+    @handle_web_errors
+    def update_lesson(self, new_lesson: dict, old_lesson_id: str) -> bool:
+        """ Updates lesson in Erudite """
+
+        result_raw = httpx.put(
+            f"{self.NVR_API_URL}/lessons/{old_lesson_id}",
+            json=new_lesson,
+            headers={"key": self.NVR_API_KEY},
+        )
+
+        if result_raw.status_code == 200:
+            return True
+
+        logger.error(f"Lesson could not be updated - {result_raw}")
+        return False
+
+    @handle_web_errors
+    def delete_lesson(self, lesson_id: str) -> bool:
+        """ Deletes lesson from Erudite """
+
+        result_raw = httpx.delete(
+            f"{self.NVR_API_URL}/lessons/{lesson_id}", headers={"key": self.NVR_API_KEY}
+        )
+
+        if result_raw.status_code == 200:
+            return True
+
+        logger.error(f"Lesson could not be deleted from Erudite - {result_raw}")
+        return False

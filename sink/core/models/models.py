@@ -16,21 +16,23 @@ class Lesson:
     def ruz_convertation(self, lesson_attributes: dict) -> None:
         """ Converts given list of lesson's attributes to the Lesson's fields """
 
-        self.original: dict = lesson_attributes
+        self.original: dict = deepcopy(lesson_attributes)
 
         date = lesson_attributes["date"].split(".")
         self.date: str = "-".join(date)
 
-        self.id = lesson_attributes["lessonOid"]
+        try:
+            self.id = lesson_attributes["lessonOid"]
+        except:
+            print(lesson_attributes)
+            raise Exception
 
         self.start_time = lesson_attributes["beginLesson"]
         self.end_time = lesson_attributes["endLesson"]
 
         self.url = lesson_attributes["url1"]
 
-        self.location = (
-            f"{lesson_attributes['auditorium']}/{lesson_attributes['building']}"
-        )
+        self.auditorium = lesson_attributes["auditorium"]
 
         # We later fill group email with function
         self.grp_emails = None
@@ -44,13 +46,14 @@ class Lesson:
         """ Converts given list of lesson's attributes to the Lesson's fields """
 
         self.id = lesson_attributes["ruz_lesson_id"]
+        self.erudite_id = lesson_attributes["id"]
         self.original = lesson_attributes["original"]
 
         self.date = lesson_attributes["date"]
         self.start_time = lesson_attributes["start_time"]
         self.end_time = lesson_attributes["end_time"]
 
-        self.location = lesson_attributes["location"]
+        self.auditorium = lesson_attributes["ruz_auditorium_id"]
         self.url = lesson_attributes["url"]
 
         grp_emails = lesson_attributes.get("grp_emails")
@@ -68,7 +71,6 @@ class Lesson:
         lesson["ruz_lesson_id"] = self.id
 
         lesson["original"] = original_lesson
-        original_lesson.pop("date")
         lesson["date"] = self.date
 
         lesson["start_time"] = self.start_time
@@ -76,8 +78,11 @@ class Lesson:
 
         lesson["url"] = self.url
 
-        lesson["location"] = self.location
-        lesson["course_code"] = self.course_code
+        lesson["ruz_auditorium_id"] = self.auditorium
+        if self.course_code is not None:
+            lesson["course_code"] = self.course_code
+        else:
+            lesson["course_code"] = ""
 
         if self.grp_emails:
             lesson["grp_emails"] = self.grp_emails
