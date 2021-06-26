@@ -1,8 +1,6 @@
 from loguru import logger
 from copy import deepcopy
 
-from ..utils import camel_to_snake
-
 
 class Lesson:
     def __init__(self, lesson_attributes: dict, source: str = "ruz") -> None:
@@ -10,21 +8,24 @@ class Lesson:
 
         if source == "ruz":
             self.ruz_convertation(lesson_attributes)
+        elif source == "erudite":
+            self.erudite_convertation(lesson_attributes)
         else:
             logger.error("Source not supported")
 
     def ruz_convertation(self, lesson_attributes: dict) -> None:
         """ Converts given list of lesson's attributes to the Lesson's fields """
 
-        self.raw: dict = lesson_attributes
+        self.original: dict = lesson_attributes
 
         date = lesson_attributes["date"].split(".")
         self.date: str = "-".join(date)
 
+        self.id = lesson_attributes["lessonOid"]
+
         self.start_time = lesson_attributes["beginLesson"]
         self.end_time = lesson_attributes["endLesson"]
 
-        self.summary = lesson_attributes["discipline"]
         self.location = (
             f"{lesson_attributes['auditorium']}/{lesson_attributes['building']}"
         )
@@ -38,50 +39,30 @@ class Lesson:
         else:
             self.course_code: str = lesson_attributes["group"].split("#")[0]
 
-        self.description = (
-            f"Поток: {self.course_code}\n"
-            f"Преподаватель: {lesson_attributes['lecturer']}\n"
-            f"Тип занятия: {lesson_attributes['kindOfWork']}\n"
-        )
+    def erudite_convertation(self, lesson_attributes: dict) -> None:
+        """ Converts given list of lesson's attributes to the Lesson's fields """
 
-        if self.url:
-            self.description += f"URL: {self.url}\n"
-
-        if lesson_attributes["lecturerEmail"]:
-            self.miem_lecturer_email: str = (
-                lesson_attributes["lecturerEmail"].split("@")[0] + "@miem.hse.ru"
-            )
+        self.id = lesson_attributes["ruz_lesson_oid"]
+        # self.original = lesson_attributes["original"]
 
     def to_json(self) -> dict:
         """ Converts data, stored in the object to dict """
 
         lesson = {}
-        raw_lesson = deepcopy(self.raw)
+        original_lesson = deepcopy(self.original)
 
-        raw_lesson.pop("date")
+        lesson["original"] = original_lesson
+        original_lesson.pop("date")
         lesson["date"] = self.date
 
-        lesson["start_time"] = raw_lesson.pop("beginLesson")
-        lesson["end_time"] = raw_lesson.pop("endLesson")
+        lesson["start_time"] = self.start_time
+        lesson["end_time"] = self.end_time
 
-        lesson["summary"] = raw_lesson["discipline"]
         lesson["location"] = self.location
-
-        for key in raw_lesson:
-            new_key = f"ruz_{camel_to_snake(key)}"
-            lesson[new_key] = raw_lesson[key]
-
-        lesson["ruz_url"] = lesson["ruz_url1"]
-
         lesson["course_code"] = self.course_code
 
         if self.grp_emails:
             lesson["grp_emails"] = self.grp_emails
-
-        lesson["description"] = self.description
-
-        if lesson.get("ruz_lecturer_email"):  # None or ""
-            lesson["miem_lecturer_email"] = self.miem_lecturer_email
 
         return lesson
 

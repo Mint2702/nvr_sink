@@ -1,17 +1,16 @@
-from aiohttp import ClientSession
+import httpx
 from loguru import logger
 import time
 from datetime import datetime
 import pytz
 
 from ..settings import settings
-from ..utils import semlock, NVR
+from ..utils import handle_web_errors
 
 
 class Erudite:
-    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"
+    NVR_API_URL = "https://nvr.miem.hse.ru/api/erudite"  # "http://localhost:8000"
     NVR_API_KEY = settings.nvr_api_key
-    SERVICE = NVR
 
     def __init__(self) -> None:
         tzmoscow = pytz.timezone("Europe/Moscow")
@@ -19,38 +18,34 @@ class Erudite:
             datetime.now().replace(microsecond=0, tzinfo=tzmoscow).isoformat()
         )
 
-    @semlock
-    async def get_lessons_in_room(self, ruz_auditorium_oid: str) -> list:
+    @handle_web_errors
+    def get_lessons_in_room(self, ruz_auditorium_oid: str) -> list:
         """ Gets all lessons from Erudite """
 
-        async with ClientSession() as session:
-            res = await session.get(
-                f"{self.NVR_API_URL}/lessons",
-                params={"ruz_auditorium_oid": ruz_auditorium_oid, "fromdate": self.dt},
-            )
-            async with res:
-                lessons = await res.json()
+        result_raw = httpx.get(
+            f"{self.NVR_API_URL}/lessons",
+            params={"ruz_auditorium_oid": ruz_auditorium_oid, "fromdate": self.dt},
+        )
+        lessons = result_raw.json()
 
-        if res.status == 200:
+        if result_raw.status_code == 200:
             return lessons
         else:
             # logger.info("Lessons not found")
             return []
 
-    @semlock
-    async def get_course_emails(self, course_code: str):
+    @handle_web_errors
+    def get_course_emails(self, course_code: str) -> list:
         """ Gets emails from a GET responce from Erudite """
 
-        async with ClientSession() as session:
-            res = await session.get(
-                f"{self.NVR_API_URL}/disciplines",
-                params={"course_code": course_code},
-            )
-            async with res:
-                data = await res.json()
+        result_raw = httpx.get(
+            f"{self.NVR_API_URL}/disciplines",
+            params={"course_code": course_code},
+        )
+        group_email = result_raw.json()
 
-        if res.status == 200:
-            grp_emails = data[0].get("emails")
+        if result_raw.status_code == 200:
+            grp_emails = group_email[0].get("emails")
         else:
             return []
 
@@ -58,3 +53,17 @@ class Erudite:
             return []
 
         return grp_emails
+
+    @handle_web_errors
+    def get_lesson_by_lessonOid(self, lesson_id: str) -> dict or None:
+        """ Gets lesson by it's lessonOid """
+
+        result_raw = httpx.get(
+            f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_oid": lesson_id}
+        )
+        lesson = result_raw.json()
+
+        if result_raw.status_code == 200:
+            return lesson
+        else:
+            return None
