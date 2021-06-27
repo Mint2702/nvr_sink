@@ -1,8 +1,7 @@
 import httpx
 from loguru import logger
 import time
-from datetime import datetime
-import pytz
+from datetime import datetime, timedelta
 
 from ..settings import settings
 from ..utils import handle_web_errors
@@ -13,18 +12,29 @@ class Erudite:
     NVR_API_KEY = settings.nvr_api_key
 
     def __init__(self) -> None:
-        tzmoscow = pytz.timezone("Europe/Moscow")
-        self.dt: str = (
-            datetime.now().replace(microsecond=0, tzinfo=tzmoscow).isoformat()
+        self.period = settings.period
+        self.needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
+            "%Y-%m-%d"
         )
+        # today = datetime.today().strftime("%Y.%m.%d")
+        self.today = (datetime.today() - timedelta(10)).strftime("%Y-%m-%d")
+
+        self.needed_date += " 21:00"
+        self.today += " 09:00"
 
     @handle_web_errors
     def get_lessons_in_room(self, ruz_auditorium_oid: str) -> list:
         """ Gets all lessons from Erudite """
 
+        params = {
+            "ruz_auditorium_id": ruz_auditorium_oid,
+            "fromdate": self.today,
+            "todate": self.needed_date,
+        }
+
         result_raw = httpx.get(
             f"{self.NVR_API_URL}/lessons",
-            params={"ruz_auditorium_id": ruz_auditorium_oid, "fromdate": self.dt},
+            params=params,
         )
         lessons = result_raw.json()
 

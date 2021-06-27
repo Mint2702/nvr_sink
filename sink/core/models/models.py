@@ -32,7 +32,7 @@ class Lesson:
 
         self.url = lesson_attributes["url1"]
 
-        self.auditorium = lesson_attributes["auditorium"]
+        self.auditorium_id = lesson_attributes["auditoriumOid"]
 
         # We later fill group email with function
         self.grp_emails = None
@@ -53,7 +53,7 @@ class Lesson:
         self.start_time = lesson_attributes["start_time"]
         self.end_time = lesson_attributes["end_time"]
 
-        self.auditorium = lesson_attributes["ruz_auditorium_id"]
+        self.auditorium_id = lesson_attributes["ruz_auditorium_id"]
         self.url = lesson_attributes["url"]
 
         grp_emails = lesson_attributes.get("grp_emails")
@@ -78,7 +78,7 @@ class Lesson:
 
         lesson["url"] = self.url
 
-        lesson["ruz_auditorium_id"] = self.auditorium
+        lesson["ruz_auditorium_id"] = self.auditorium_id
         if self.course_code is not None:
             lesson["course_code"] = self.course_code
         else:

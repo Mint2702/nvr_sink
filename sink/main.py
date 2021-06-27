@@ -40,19 +40,18 @@ class CalendarManager:
         """ Synchronization of lessons in the room for a period of time, specified in .env file """
 
         ruz_lessons = self.get_lessons_in_room(room.ruz_room_id)
-        logger.info(f"Num of lessons in this room in RUZ - {len(ruz_lessons)}")
-
         self.add_group_email_to_lessons(ruz_lessons)
-
-        # Adding and updating lessons
-        for lesson in ruz_lessons:
-            self.synchronize_lesson_from_schedule_service_with_erudite(lesson)
+        logger.info(f"Num of lessons in this room in RUZ - {len(ruz_lessons)}")
 
         erudite_lessons = self.erudite.get_lessons_in_room(room.ruz_room_id)
         erudite_lessons = [
             Lesson(lesson, source="erudite") for lesson in erudite_lessons
         ]
         logger.info(f"Num of lessons in this room in Erudite - {len(erudite_lessons)}")
+
+        # Adding and updating lessons
+        for lesson in ruz_lessons:
+            self.synchronize_lesson_from_schedule_service_with_erudite(lesson)
 
         # Deleting lessons
         for lesson in erudite_lessons:
