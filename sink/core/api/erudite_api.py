@@ -1,6 +1,5 @@
 import httpx
 from loguru import logger
-import time
 from datetime import datetime, timedelta
 
 from ..settings import settings
@@ -8,7 +7,7 @@ from ..utils import handle_web_errors
 
 
 class Erudite:
-    NVR_API_URL = "http://localhost:8000"  #  "https://nvr.miem.hse.ru/api/erudite"
+    NVR_API_URL = "http://localhost:8000"  # "https://nvr.miem.hse.ru/api/erudite"
     NVR_API_KEY = settings.nvr_api_key
 
     def __init__(self) -> None:
@@ -23,11 +22,11 @@ class Erudite:
         self.today += " 09:00"
 
     @handle_web_errors
-    def get_lessons_in_room(self, ruz_auditorium_oid: str) -> list:
+    def get_lessons_in_room(self, schedule_auditorium_oid: str) -> list:
         """ Gets all lessons from Erudite """
 
         params = {
-            "ruz_auditorium_id": ruz_auditorium_oid,
+            "schedule_auditorium_id": schedule_auditorium_oid,
             "fromdate": self.today,
             "todate": self.needed_date,
         }
@@ -45,12 +44,12 @@ class Erudite:
             return []
 
     @handle_web_errors
-    def get_course_emails(self, course_code: str) -> list:
+    def get_course_emails(self, schedule_course_code: str) -> list:
         """ Gets emails from a GET responce from Erudite """
 
         result_raw = httpx.get(
             f"{self.NVR_API_URL}/disciplines",
-            params={"course_code": course_code},
+            params={"course_code": schedule_course_code},
         )
         group_email = result_raw.json()
 
@@ -69,7 +68,7 @@ class Erudite:
         """ Gets lesson by it's lessonOid """
 
         result_raw = httpx.get(
-            f"{self.NVR_API_URL}/lessons", params={"ruz_lesson_id": lesson_id}
+            f"{self.NVR_API_URL}/lessons", params={"schedule_lesson_id": lesson_id}
         )
         lesson = result_raw.json()
 

@@ -1,5 +1,4 @@
 from pydantic import BaseSettings, Field
-from typing import Optional
 
 
 class Settings(BaseSettings):

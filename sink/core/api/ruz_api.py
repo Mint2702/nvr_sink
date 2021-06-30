@@ -1,8 +1,5 @@
 import httpx
 from datetime import datetime, timedelta
-import json
-
-from loguru import logger
 
 from ..utils import handle_web_errors
 from ..settings import settings
