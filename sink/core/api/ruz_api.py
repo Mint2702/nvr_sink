@@ -15,8 +15,8 @@ class RuzApi:
     def get_rooms(self, building_id: int = 92) -> list:
         """ Gets rooms (by default in MIEM) """
 
-        result_raw = httpx.get(f"{self.url}/auditoriums?buildingoid=0")
-        all_auditories = result_raw.json()
+        responce = httpx.get(f"{self.url}/auditoriums?buildingoid=0")
+        all_auditories = responce.json()
 
         rooms = [
             room
@@ -32,24 +32,24 @@ class RuzApi:
         Gets lessons in room for a specified period and converts them into the Erudite needed format
         """
 
-        needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
+        self.needed_date = (datetime.today() + timedelta(days=self.period)).strftime(
             "%Y.%m.%d"
         )
         # today = datetime.today().strftime("%Y.%m.%d")
-        today = (datetime.today() - timedelta(10)).strftime("%Y.%m.%d")
-        params = dict(
-            fromdate=today, todate=needed_date, auditoriumoid=str(ruz_room_id)
-        )
+        self.today = (datetime.today() - timedelta(days=10)).strftime("%Y.%m.%d")
 
-        lessons = self._request_lessons_in_room(params)
+        lessons = self._request_lessons_in_room(ruz_room_id)
 
         return lessons
 
     @handle_web_errors
-    def _request_lessons_in_room(self, params: str) -> dict:
+    def _request_lessons_in_room(self, ruz_room_id: str) -> dict:
         """ Gets lessons from RUZ by given parameters """
 
-        result_raw = httpx.get(f"{self.url}/lessons", params=params)
-        lessons = result_raw.json()
+        params = dict(
+            fromdate=self.today, todate=self.needed_date, auditoriumoid=str(ruz_room_id)
+        )
+        responce = httpx.get(f"{self.url}/lessons", params=params)
+        lessons = responce.json()
 
         return lessons

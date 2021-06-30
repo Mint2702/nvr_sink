@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     creds_path: str = Field(..., env="CREDS_PATH")
     token_path: str = Field(..., env="TOKEN_PATH")
     buildings: list = Field(..., env="BUILDINGS")
+    erudite_url: str = Field(..., env="ERUDITE_URL")
 
     class Config:
         env_file = ".env"
